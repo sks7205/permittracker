@@ -374,20 +374,54 @@ function renderConfig() {
 //  EXPORT & SHARE
 // ══════════════════════════════════════
 async function captureReportImage() {
-  const reportElement = document.querySelector('.report-table-wrap');
-  if (!reportElement) { alert("Report table not found."); return; }
+  const tableWrap = document.querySelector('.report-table-wrap');
+  const table = document.getElementById('report-table');
+  if (!tableWrap || !table) { alert("Report table not found."); return; }
+
   const btn = document.getElementById('capture-btn');
   const originalText = btn.innerText;
-  btn.innerText = "⏳ Saving..."; btn.disabled = true;
+  btn.innerText = "⏳ Capturing Full View..."; 
+  btn.disabled = true;
+
+  // Save the original structural styles
+  const oldWidth = tableWrap.style.width;
+  const oldOverflow = tableWrap.style.overflow;
+
   try {
-    const canvas = await html2canvas(reportElement, { scale: 2, backgroundColor: '#ffffff' });
+    // FORCE the container to expand completely to the hidden table width
+    tableWrap.style.width = table.scrollWidth + "px";
+    tableWrap.style.overflow = "visible";
+
+    // Capture the entire expanded component
+    const canvas = await html2canvas(tableWrap, { 
+      scale: 2,               // Keeps the text looking sharp like Excel
+      backgroundColor: '#ffffff',
+      windowWidth: table.scrollWidth, // Ensures full rendering matrix
+      useCORS: true
+    });
+
+    // Reset styles back to mobile view layout immediately
+    tableWrap.style.width = oldWidth;
+    tableWrap.style.overflow = oldOverflow;
+
+    // Trigger the file download
     const imageUri = canvas.toDataURL("image/png");
     const downloadLink = document.createElement("a");
     downloadLink.download = `Permit_Report_${meta.date.replace(/\//g, "-")}_Shift_${meta.shift}.png`;
     downloadLink.href = imageUri;
-    document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
-  } catch (error) { alert("Capture failed. Try taking a normal screenshot."); }
-  finally { btn.innerText = originalText; btn.disabled = false; }
+    document.body.appendChild(downloadLink); 
+    downloadLink.click(); 
+    document.body.removeChild(downloadLink);
+
+  } catch (error) { 
+    // Fallback cleanup in case of execution errors
+    tableWrap.style.width = oldWidth;
+    tableWrap.style.overflow = oldOverflow;
+    alert("Capture failed. Try taking a normal screenshot."); 
+  } finally { 
+    btn.innerText = originalText; 
+    btn.disabled = false; 
+  }
 }
  
 function exportExcel() {
