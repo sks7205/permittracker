@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ARS-2 Permit Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; }
+
+  .header { background: #1e3a5f; color: white; padding: 48px 16px 12px; position: sticky; top: 0; z-index: 100; }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .header-label { font-size: 10px; letter-spacing: 2px; color: #93c5fd; font-weight: 700; text-transform: uppercase; }
+  .header-title { font-size: 18px; font-weight: 800; margin-top: 2px; }
+  .header-sub { font-size: 12px; color: #93c5fd; margin-top: 2px; }
+  .header-actions { display: flex; gap: 8px; }
+  .icon-btn { background: rgba(255,255,255,0.12); border: none; color: white; width: 38px; height: 38px; border-radius: 10px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .tabs { display: flex; gap: 6px; }
+  .tab { flex: 1; padding: 8px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: #93c5fd; }
+  .tab.active { background: white; color: #1e3a5f; }
+  .sync-bar { background: #e2e8f0; text-align: center; font-size: 11px; color: #64748b; padding: 4px; border-bottom: 1px solid #cbd5e1; }
+  .setup-banner { background: #fef3c7; border-bottom: 1px solid #fde68a; padding: 10px 16px; font-size: 13px; color: #92400e; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+
+  .section-filter { display: flex; gap: 6px; padding: 10px 14px; overflow-x: auto; background: white; border-bottom: 1px solid #e2e8f0; scrollbar-width: none; }
+  .section-filter::-webkit-scrollbar { display: none; }
+  .pill { flex-shrink: 0; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1.5px solid; cursor: pointer; white-space: nowrap; }
+  .pill-all    { background: #1e3a5f; color: white;   border-color: #1e3a5f; }
+  .pill-all-off{ background: white;   color: #64748b; border-color: #e2e8f0; }
+  .pill-mech   { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+  .pill-mech-off{ background: white;  color: #64748b; border-color: #e2e8f0; }
+  .pill-elec   { background: #fef9c3; color: #ca8a04; border-color: #fde68a; }
+  .pill-elec-off{ background: white;  color: #64748b; border-color: #e2e8f0; }
+  .pill-oper   { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
+  .pill-oper-off{ background: white;  color: #64748b; border-color: #e2e8f0; }
+
+  .list { padding: 12px 14px 100px; }
+  .empty { text-align: center; padding: 60px 20px; color: #94a3b8; }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #64748b; }
+
+  .card { background: white; border-radius: 14px; border: 1px solid #e2e8f0; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; }
+  .card:active { background: #f8fafc; }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; gap: 6px; }
+  .card-order { font-size: 17px; font-weight: 800; color: #0f172a; font-family: monospace; }
+  .card-desc { font-size: 13px; color: #475569; margin-bottom: 8px; line-height: 1.4; }
+  .card-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: #64748b; }
+
+  .badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; border: 1px solid; white-space: nowrap; }
+  .badge-green  { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
+  .badge-yellow { background: #fef9c3; color: #ca8a04; border-color: #fde68a; }
+  .badge-blue   { background: #dbeafe; color: #2563eb; border-color: #bfdbfe; }
+  .badge-gray   { background: #f1f5f9; color: #64748b; border-color: #e2e8f0; }
+  .badge-purple { background: #f3e8ff; color: #7c3aed; border-color: #ddd6fe; }
+  .badge-orange { background: #fff7ed; color: #ea580c; border-color: #fed7aa; }
+  .badge-teal   { background: #f0fdfa; color: #0f766e; border-color: #99f6e4; }
+  .badge-red    { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+
+  .fab { position: fixed; bottom: 24px; right: 20px; width: 58px; height: 58px; border-radius: 50%; background: #1e3a5f; color: white; font-size: 32px; border: none; cursor: pointer; box-shadow: 0 4px 16px rgba(30,58,95,0.4); display: flex; align-items: center; justify-content: center; z-index: 50; }
+  .fab:active { transform: scale(0.93); }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: flex-end; }
+  .modal { background: white; width: 100%; border-radius: 20px 20px 0 0; max-height: 92vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 16px 12px; border-bottom: 1px solid #f1f5f9; position: sticky; top: 0; background: white; z-index: 10; }
+  .modal-title { font-size: 17px; font-weight: 800; }
+  .close-btn { background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; }
+  .modal-body { padding: 16px; }
+
+  .field { margin-bottom: 18px; position: relative; }
+  .field label { display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .field input, .field textarea, .field select { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px; font-size: 16px; color: #0f172a; background: #f8fafc; outline: none; font-family: inherit; }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: #3b82f6; background: white; }
+  .field textarea { resize: none; }
+
+  /* AUTOCOMPLETE - key: no blur handler, use touchend+click on items */
+  .ac-wrap { position: relative; }
+  .ac-list { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #3b82f6; border-top: none; border-radius: 0 0 12px 12px; z-index: 9999; max-height: 220px; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+  .ac-item { padding: 14px 12px; font-size: 15px; color: #1e293b; border-bottom: 1px solid #f1f5f9; }
+  .ac-item:last-child { border-bottom: none; }
+  .ac-item b { color: #2563eb; }
+  .ac-item:active { background: #eff6ff; }
+
+  .order-type-preview { margin-top: 6px; font-size: 12px; color: #64748b; min-height: 20px; }
+  .section-select-row { display: flex; gap: 8px; margin-bottom: 18px; }
+  .section-btn { flex: 1; padding: 10px 4px; border-radius: 10px; border: 2px solid #e2e8f0; background: #f8fafc; font-size: 12px; font-weight: 700; cursor: pointer; text-align: center; color: #64748b; }
+  .section-btn.active-mech { background: #dbeafe; color: #1d4ed8; border-color: #3b82f6; }
+  .section-btn.active-elec { background: #fef9c3; color: #ca8a04; border-color: #eab308; }
+  .section-btn.active-oper { background: #dcfce7; color: #16a34a; border-color: #22c55e; }
+
+  .time-row { display: flex; gap: 8px; }
+  .time-row input { flex: 1; }
+  .now-btn { background: #f1f5f9; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0 14px; font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; white-space: nowrap; }
+
+  .toggle-row { display: flex; align-items: center; gap: 12px; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 12px; margin-bottom: 18px; }
+  .toggle-row input[type=checkbox] { width: 22px; height: 22px; accent-color: #2563eb; cursor: pointer; }
+  .toggle-row label { font-size: 14px; font-weight: 600; color: #1d4ed8; cursor: pointer; }
+
+  /* Extended / Returned section in form */
+  .ext-ret-row { display: flex; gap: 8px; margin-bottom: 18px; }
+  .ext-ret-btn { flex: 1; padding: 10px 6px; border-radius: 10px; border: 2px solid #e2e8f0; background: #f8fafc; font-size: 12px; font-weight: 700; cursor: pointer; text-align: center; color: #64748b; }
+  .ext-ret-btn.active-ext { background: #fff7ed; color: #ea580c; border-color: #fb923c; }
+  .ext-ret-btn.active-ret { background: #dcfce7; color: #16a34a; border-color: #22c55e; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 6px; }
+  .btn-primary { flex: 1; background: #1e3a5f; color: white; border: none; border-radius: 12px; padding: 15px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .btn-primary:disabled { opacity: 0.5; }
+  .btn-danger { background: #fff1f2; border: 1.5px solid #fecdd3; color: #e11d48; border-radius: 12px; padding: 15px 18px; font-size: 14px; font-weight: 700; cursor: pointer; }
+
+  .report { padding: 12px 14px 40px; }
+  .report-header { background: #1e293b; color: white; border-radius: 12px 12px 0 0; padding: 14px; }
+  .report-header h2 { font-size: 15px; font-weight: 800; letter-spacing: 1px; }
+  .report-header p { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+  .report-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+  .report-actions button { flex: 1; padding: 11px; border-radius: 10px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn-excel { background: #16a34a; color: white; }
+  .btn-share { background: #2563eb; color: white; }
+  .report-table-wrap { overflow-x: auto; background: white; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0; border-top: none; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 820px; }
+  th { background: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 10px; padding: 8px 6px; border: 1px solid #e2e8f0; white-space: nowrap; }
+  td { padding: 8px 6px; border: 1px solid #e2e8f0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .report-hint { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 10px; }
+
+  .loading { text-align: center; padding: 80px 20px; color: #64748b; }
+  .spinner { font-size: 36px; animation: spin 1s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .config-screen { padding: 20px 16px; }
+  .config-screen h2 { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+  .config-screen p { font-size: 13px; color: #64748b; margin-bottom: 20px; line-height: 1.6; }
+  .hint-box { background: #fef9c3; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; font-size: 12px; color: #92400e; margin-bottom: 16px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="loading"><div class="spinner">⚙️</div><p style="margin-top:16px">Loading...</p></div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════
+let API_URL = localStorage.getItem("ars2_api_url") || "";
+let permits = [];
+let meta = { date: todayStr(), shift: "A", issuer: "" };
+let currentView = "list";
+let sectionFilter = "ALL";
+let editingPermit = null;
+let syncing = false;
+let lastSync = null;
+let refreshTimer = null;
+
+// ══════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════
+function classifyOrder(orderNo) {
+  const s = String(orderNo||"").trim().replace(/\D/g,"");
+  if (!s) return "";
+  const len = s.length, first = s[0];
+  if (len===8 && first==="1") return "MA";
+  if (len===9 && first==="1") return "M1";
+  if (len===9 && first==="2") return "M2";
+  if (len===9 && first==="3") return "M3";
+  if (len===9 && first==="4") return "M4";
+  return "—";
+}
+function orderTypeBadgeCls(t) {
+  return {MA:"badge-purple",M1:"badge-blue",M2:"badge-orange",M3:"badge-teal",M4:"badge-red"}[t]||"badge-gray";
+}
+function sectionBadgeCls(s) {
+  if (s==="Mechanical") return "badge-blue";
+  if (s==="Electrical") return "badge-yellow";
+  if (s==="Operation")  return "badge-green";
+  return "badge-gray";
+}
+function todayStr() {
+  const d=new Date(); return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+}
+function pad(n) { return String(n).padStart(2,"0"); }
+function nowTime() { return new Date().toTimeString().slice(0,5); }
+function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+// ══════════════════════════════════════
+//  API
+// ══════════════════════════════════════
+async function api(action, body={}) {
+  if (!API_URL) throw new Error("No API URL");
+  const res = await fetch(API_URL, {
+    method:"POST", body:JSON.stringify({action,...body}), headers:{"Content-Type":"text/plain"}
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+async function loadAll() {
+  const [p,m] = await Promise.all([api("getAll"),api("getMeta")]);
+  permits = (p.permits||[]).map(x=>({...x, id:String(x.id)}));
+  meta = m.meta || meta;
+  lastSync = new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+}
+
+// ══════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════
+function activePermits() {
+  return permits.filter(p => {
+    const d = String(p.shiftDate || "").trim();
+    const s = String(p.shift     || "").trim();
+    // Old records without shiftDate: always show so data is never hidden
+    if (!d || !s) return true;
+    return d === meta.date && s === meta.shift;
+  });
+}
+
+function render() {
+  const app = document.getElementById("app");
+  if (!API_URL) { app.innerHTML = renderConfig(); return; }
+  app.innerHTML = `
+    ${renderHeader()}
+    ${renderSyncBar()}
+    ${!meta.issuer?`<div class="setup-banner" onclick="openSetup()">⚠️ Tap to set your name and shift details</div>`:""}
+    <div id="main-content">${currentView==="list"?renderList():renderReport()}</div>
+    ${currentView==="list"?`<button class="fab" onclick="openAdd()">+</button>`:""}
+  `;
+}
+
+function renderHeader() {
+  return `<div class="header">
+    <div class="header-top">
+      <div>
+        <div class="header-label">ARS-2 · Permit Tracker</div>
+        <div class="header-title">${esc(meta.date)} · Shift ${esc(meta.shift)}</div>
+        ${meta.issuer?`<div class="header-sub">${esc(meta.issuer)}</div>`:""}
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" onclick="doRefresh()">${syncing?"⏳":"🔄"}</button>
+        <button class="icon-btn" onclick="openSetup()">⚙️</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab ${currentView==="list"?"active":""}" onclick="switchView('list')">Permits (${activePermits().length})</button>
+      <button class="tab ${currentView==="report"?"active":""}" onclick="switchView('report')">📋 Report</button>
+    </div>
+  </div>`;
+}
+
+function renderSyncBar() {
+  return `<div class="sync-bar">${lastSync?`Last synced ${lastSync} · Auto-refresh 20s`:"Connecting..."}</div>`;
+}
+
+function renderSectionFilter() {
+  const defs = [
+    {key:"ALL",       cls:["pill-all","pill-all-off"],   label:"All"},
+    {key:"Mechanical",cls:["pill-mech","pill-mech-off"], label:"⚙️ Mechanical"},
+    {key:"Electrical",cls:["pill-elec","pill-elec-off"], label:"⚡ Electrical"},
+    {key:"Operation", cls:["pill-oper","pill-oper-off"], label:"🏗️ Operation"},
+  ];
+  return `<div class="section-filter">${defs.map(d=>{
+    const ap = activePermits(); const count = d.key==="ALL"?ap.length:ap.filter(p=>p.section===d.key).length;
+    const on = sectionFilter===d.key;
+    return `<button class="pill ${on?d.cls[0]:d.cls[1]}" onclick="setFilter('${d.key}')">${d.label} (${count})</button>`;
+  }).join("")}</div>`;
+}
+
+function renderList() {
+  const ap = activePermits();
+  const filtered = sectionFilter==="ALL"?ap:ap.filter(p=>p.section===sectionFilter);
+  if (ap.length===0) return `${renderSectionFilter()}<div class="list"><div class="empty"><div class="empty-icon">📋</div><h3>No permits for this date/shift</h3><p>Tap + to add first permit</p></div></div>`;
+
+  const cards = filtered.map(p=>{
+    const hasIso   = !!p.isolationTime;
+    const hasIssue = !!p.issueTime;
+    const returned = p.status==="returned";
+    const extended = p.status==="extended";
+    const status   = returned?"Returned":extended?"Extended":hasIssue?"Issued":hasIso?"Isolated":"Pending";
+    const stCls    = returned?"badge-green":extended?"badge-orange":hasIssue?"badge-blue":hasIso?"badge-yellow":"badge-gray";
+    const oType    = classifyOrder(p.orderNo);
+    const idx      = ap.indexOf(p)+1;
+    return `<div class="card" onclick="openEdit('${esc(p.id)}')">
+      <div class="card-top">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:11px;color:#94a3b8;font-weight:700">#${idx}</span>
+          <span class="card-order">${esc(p.orderNo)}</span>
+          ${oType&&oType!=="—"?`<span class="badge ${orderTypeBadgeCls(oType)}">${oType}</span>`:""}
+          ${p.isOnline?`<span class="badge badge-blue">Online</span>`:""}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <span class="badge ${stCls}">${status}</span>
+          ${p.section?`<span class="badge ${sectionBadgeCls(p.section)}" style="font-size:10px">${esc(p.section)}</span>`:""}
+        </div>
+      </div>
+      <div class="card-desc">${esc(p.jobDescription)}</div>
+      <div class="card-meta">
+        <span>👤 ${esc(p.receiver)}</span>
+        ${p.contactNo?`<span>📞 ${esc(p.contactNo)}</span>`:""}
+        ${p.isolationTime?`<span>🔒 ${esc(p.isolationTime)}</span>`:""}
+        ${p.issueTime?`<span>✅ ${esc(p.issueTime)}</span>`:""}
+        ${p.extendedTime?`<span>⏰ Ext: ${esc(p.extendedTime)}</span>`:""}
+        ${p.returnedTime?`<span>🔁 Ret: ${esc(p.returnedTime)}</span>`:""}
+        ${p.issuer?`<span style="color:#94a3b8">${esc(p.issuer)}</span>`:""}
+      </div>
+    </div>`;
+  }).join("");
+
+  const emptyMsg = filtered.length===0?`<div class="empty"><div class="empty-icon">🔍</div><h3>No ${sectionFilter} permits</h3></div>`:"";
+  return `${renderSectionFilter()}<div class="list">${cards}${emptyMsg}</div>`;
+}
+
+function renderReport() {
+  const ap = activePermits();
+  const rows = ap.map((p,i)=>{
+    const oType = classifyOrder(p.orderNo);
+    return `<tr>
+      <td>${i+1}</td>
+      <td style="font-family:monospace;font-weight:700">${esc(p.orderNo)}</td>
+      <td style="font-weight:700">${esc(oType)}</td>
+      <td>${esc(p.section||"")}</td>
+      <td>${esc(p.jobDescription)}</td>
+      <td>${esc(p.receiver)}</td>
+      <td>${esc(p.contactNo||"")}</td>
+      <td>${esc(p.isolationTime||"—")}</td>
+      <td>${esc(p.issueTime||"—")}</td>
+      <td>${esc(p.extendedTime||"—")}</td>
+      <td>${esc(p.returnedTime||"—")}</td>
+      <td>${(p.isOnline==="TRUE"||p.isOnline===true)?"Online":"Isolated"}</td>
+      <td>${esc(p.issuer||"")}</td>
+    </tr>`;
+  }).join("");
+
+  return `<div class="report">
+    <div class="report-header">
+      <h2>PERMIT TRACKER — ARS-2</h2>
+      <p>Date: ${esc(meta.date)} &nbsp;·&nbsp; Shift: ${esc(meta.shift)}</p>
+    </div>
+    <div class="report-actions">
+      <button class="btn-excel" onclick="exportExcel()">📥 Export Excel</button>
+      <button class="btn-share" onclick="shareReport()">📤 Share</button>
+    </div>
+    <div class="report-table-wrap">
+      <table id="report-table">
+        <thead><tr>
+          <th>#</th><th>Order No</th><th>Type</th><th>Section</th>
+          <th>Job Description</th><th>Receiver</th><th>Contact</th>
+          <th>Isolation</th><th>Issue</th><th>Extended</th><th>Returned</th>
+          <th>Permit</th><th>By</th>
+        </tr></thead>
+        <tbody>${rows||`<tr><td colspan="13" style="text-align:center;color:#94a3b8;padding:20px">No permits</td></tr>`}</tbody>
+      </table>
+    </div>
+    <p class="report-hint">📸 Screenshot · or use Export / Share above</p>
+  </div>`;
+}
+
+function renderConfig() {
+  return `
+    <div style="background:#1e3a5f;padding:48px 16px 20px;color:white">
+      <div style="font-size:10px;letter-spacing:2px;color:#93c5fd;font-weight:700;text-transform:uppercase">ARS-2</div>
+      <div style="font-size:22px;font-weight:800;margin-top:4px">Permit Tracker</div>
+    </div>
+    <div class="config-screen">
+      <h2>First Time Setup</h2>
+      <p>Paste your Google Apps Script URL below. Only needed once per phone.</p>
+      <div class="hint-box">📌 Apps Script → Deploy → Manage Deployments → copy Web App URL</div>
+      <div class="field">
+        <label>Apps Script Web App URL</label>
+        <textarea id="url-input" style="font-size:13px;height:80px" placeholder="https://script.google.com/macros/s/.../exec"></textarea>
+      </div>
+      <button class="btn-primary" onclick="saveUrl()">Save & Connect</button>
+    </div>`;
+}
+
+// ══════════════════════════════════════
+//  EXPORT & SHARE
+// ══════════════════════════════════════
+function exportExcel() {
+  const headers = ["#","Order No","Type","Section","Job Description","Receiver","Contact","Isolation Time","Issue Time","Extended Time","Returned Time","Permit Type","Issued By"];
+  const ap = activePermits();
+  const rows = ap.map((p,i)=>[
+    i+1, p.orderNo, classifyOrder(p.orderNo), p.section||"",
+    p.jobDescription, p.receiver, p.contactNo||"",
+    p.isolationTime||"", p.issueTime||"",
+    p.extendedTime||"", p.returnedTime||"",
+    (p.isOnline==="TRUE"||p.isOnline===true)?"Online":"Isolated",
+    p.issuer||""
+  ]);
+  const csv = [headers,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href=url; a.download=`Permits_Shift${meta.shift}_${meta.date.replace(/\//g,"-")}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function shareReport() {
+  const ap2 = activePermits();
+  const lines = [
+    `ARS-2 PERMIT TRACKER`,`Date: ${meta.date}  Shift: ${meta.shift}`,`─────────────────────`,
+    ...ap2.map((p,i)=>{
+      const oType=classifyOrder(p.orderNo);
+      return [`${i+1}. Order: ${p.orderNo} [${oType}] | ${p.section||""}`,
+        `   Job: ${p.jobDescription}`,
+        `   Receiver: ${p.receiver}${p.contactNo?" | "+p.contactNo:""}`,
+        `   Isolation: ${p.isolationTime||"—"}  Issue: ${p.issueTime||"—"}`,
+        `   Extended: ${p.extendedTime||"—"}  Returned: ${p.returnedTime||"—"}`,
+        `   By: ${p.issuer||"—"}`].join("\n");
+    }),
+    `─────────────────────`,`Total: ${ap2.length} permits`
+  ];
+  const text = lines.join("\n");
+  if (navigator.share) {
+    navigator.share({title:`Permit Tracker – Shift ${meta.shift} ${meta.date}`,text});
+  } else {
+    navigator.clipboard.writeText(text).then(()=>{
+      alert("Report copied to clipboard! Paste into WhatsApp or Email.");
+    }).catch(()=>{
+      showModal(`<div class="modal-header"><span class="modal-title">Share Report</span><button class="close-btn" onclick="removeModal()">×</button></div>
+        <div class="modal-body"><p style="font-size:13px;color:#64748b;margin-bottom:10px">Copy and paste:</p>
+        <textarea style="width:100%;height:260px;font-size:12px;font-family:monospace;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px" onclick="this.select()">${esc(text)}</textarea></div>`);
+    });
+  }
+}
+
+// ══════════════════════════════════════
+//  MODAL
+// ══════════════════════════════════════
+function showModal(html) {
+  removeModal();
+  const overlay = document.createElement("div");
+  overlay.className="overlay"; overlay.id="modal-overlay";
+  overlay.innerHTML=`<div class="modal">${html}</div>`;
+  overlay.addEventListener("click",e=>{if(e.target===overlay)removeModal();});
+  document.body.appendChild(overlay);
+}
+function removeModal() { const el=document.getElementById("modal-overlay"); if(el) el.remove(); }
+
+// ══════════════════════════════════════
+//  AUTOCOMPLETE
+//  ROOT FIX: Never pass strings through
+//  onclick HTML attributes — they break
+//  on special chars and quotes.
+//  Instead: store matches in a JS Map,
+//  reference by numeric index only.
+// ══════════════════════════════════════
+let acTarget = null;
+const acStore = {}; // listId -> { matches[], inputId, field }
+
+function acGetSuggestions(field, query) {
+  if (!query) return [];
+  const q = query.toLowerCase();
+  const seen = new Set();
+  return permits
+    .map(p=>String(p[field]||"").trim())
+    .filter(v=>{ if(!v||seen.has(v)) return false; seen.add(v); return v.toLowerCase().includes(q); })
+    .slice(0,7);
+}
+
+function acShow(field, inputId, listId) {
+  const input = document.getElementById(inputId);
+  const list  = document.getElementById(listId);
+  if (!input||!list) return;
+  const query = input.value;
+  const matches = acGetSuggestions(field, query);
+  if (!matches.length) { list.style.display="none"; return; }
+
+  // Store matches in JS — DO NOT pass values through HTML attributes
+  acStore[listId] = { matches, inputId, field };
+
+  const q = query.toLowerCase();
+  list.innerHTML = matches.map((m, idx)=>{
+    const i = m.toLowerCase().indexOf(q);
+    const hi = i>=0
+      ? esc(m.slice(0,i))+"<b>"+esc(m.slice(i,i+q.length))+"</b>"+esc(m.slice(i+q.length))
+      : esc(m);
+    // Pass only the numeric index — completely safe in HTML attribute
+    return `<div class="ac-item" data-idx="${idx}">${hi}</div>`;
+  }).join("");
+
+  // Attach listeners directly to DOM elements — no attribute encoding needed
+  list.querySelectorAll(".ac-item").forEach(el=>{
+    const handler = e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      const idx = parseInt(el.getAttribute("data-idx"));
+      const store = acStore[listId];
+      if (!store) return;
+      const value = store.matches[idx];
+      const inp = document.getElementById(store.inputId);
+      if (inp) inp.value = value;
+      list.style.display="none";
+      acTarget = null;
+      // Auto-fill contact when receiver picked
+      if (store.field==="receiver") {
+        const match = permits.find(p=>p.receiver===value&&p.contactNo);
+        if (match) { const c=document.getElementById("f-contact"); if(c&&!c.value) c.value=match.contactNo; }
+      }
+    };
+    el.addEventListener("touchend", handler, {passive:false});
+    el.addEventListener("click", handler);
+  });
+
+  list.style.display="block";
+  acTarget = listId;
+}
+
+// Close dropdown when tapping outside
+document.addEventListener("touchstart", e=>{
+  if (!acTarget) return;
+  const list = document.getElementById(acTarget);
+  if (list && !list.contains(e.target)) { list.style.display="none"; acTarget=null; }
+}, true);
+document.addEventListener("click", e=>{
+  if (!acTarget) return;
+  const list = document.getElementById(acTarget);
+  if (list && !list.contains(e.target)) { list.style.display="none"; acTarget=null; }
+}, true);
+
+function onOrderInput(val) {
+  const type = classifyOrder(val);
+  const el = document.getElementById("order-type-preview");
+  if (!el) return;
+  el.innerHTML = type&&type!=="—"
+    ? `Type: <b class="badge ${orderTypeBadgeCls(type)}" style="font-size:11px">${type}</b>`
+    : val.length>0?`<span style="color:#94a3b8">No match — ${val.length} digit(s)</span>`:"";
+}
+
+function selectSection(sec) {
+  const h=document.getElementById("f-section"); if(h) h.value=sec;
+  document.querySelectorAll(".section-btn").forEach((btn,i)=>{
+    btn.classList.remove("active-mech","active-elec","active-oper");
+    if(i===0&&sec==="Mechanical") btn.classList.add("active-mech");
+    if(i===1&&sec==="Electrical") btn.classList.add("active-elec");
+    if(i===2&&sec==="Operation")  btn.classList.add("active-oper");
+  });
+}
+
+function selectStatus(val) {
+  const h=document.getElementById("f-status"); if(h) h.value=val;
+  document.querySelectorAll(".ext-ret-btn").forEach(btn=>{
+    btn.classList.remove("active-ext","active-ret");
+  });
+  const extBtn=document.getElementById("btn-extended");
+  const retBtn=document.getElementById("btn-returned");
+  if(val==="extended"&&extBtn) extBtn.classList.add("active-ext");
+  if(val==="returned"&&retBtn) retBtn.classList.add("active-ret");
+  // Show/hide time fields
+  const extField=document.getElementById("ext-time-field");
+  const retField=document.getElementById("ret-time-field");
+  if(extField) extField.style.display = val==="extended"?"":"none";
+  if(retField) retField.style.display = val==="returned"?"":"none";
+}
+
+function toggleOnline() {
+  const iso=document.getElementById("iso-field");
+  const chk=document.getElementById("f-online");
+  if(iso) iso.style.display=chk.checked?"none":"";
+}
+function stampNow(id) { const el=document.getElementById(id); if(el) el.value=nowTime(); }
+
+// ══════════════════════════════════════
+//  PERMIT FORM
+// ══════════════════════════════════════
+function permitFormHTML(title, p={}, isEdit=false) {
+  const isOnline = p.isOnline===true||p.isOnline==="TRUE";
+  const section  = p.section||"";
+  const status   = p.status||"";
+  const oType    = classifyOrder(p.orderNo);
+  const showExt  = status==="extended";
+  const showRet  = status==="returned";
+
+  return `
+    <div class="modal-header">
+      <span class="modal-title">${title}</span>
+      <button class="close-btn" onclick="removeModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="field">
+        <label>Order No *</label>
+        <input id="f-orderNo" type="text" inputmode="numeric" pattern="[0-9]*"
+          placeholder="e.g. 450312" value="${esc(p.orderNo||"")}"
+          oninput="onOrderInput(this.value)" autocomplete="off">
+        <div class="order-type-preview" id="order-type-preview">
+          ${oType&&oType!=="—"?`Type: <b>${oType}</b>`:""}
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Job Description *</label>
+        <div class="ac-wrap">
+          <textarea id="f-jobDesc" rows="3" placeholder="Describe the job..."
+            oninput="acShow('jobDescription','f-jobDesc','ac-jobDesc')"
+            onfocus="acShow('jobDescription','f-jobDesc','ac-jobDesc')"
+            autocomplete="off">${esc(p.jobDescription||"")}</textarea>
+          <div class="ac-list" id="ac-jobDesc"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Receiver *</label>
+        <div class="ac-wrap">
+          <input id="f-receiver" placeholder="Receiver name"
+            value="${esc(p.receiver||"")}"
+            oninput="acShow('receiver','f-receiver','ac-receiver')"
+            onfocus="acShow('receiver','f-receiver','ac-receiver')"
+            autocomplete="off">
+          <div class="ac-list" id="ac-receiver"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Contact No</label>
+        <div class="ac-wrap">
+          <input id="f-contact" type="tel" inputmode="numeric" placeholder="Mobile number"
+            value="${esc(p.contactNo||"")}"
+            oninput="acShow('contactNo','f-contact','ac-contact')"
+            onfocus="acShow('contactNo','f-contact','ac-contact')"
+            autocomplete="off">
+          <div class="ac-list" id="ac-contact"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Section *</label>
+        <div class="section-select-row">
+          <button type="button" class="section-btn ${section==="Mechanical"?"active-mech":""}" onclick="selectSection('Mechanical')">⚙️ Mechanical</button>
+          <button type="button" class="section-btn ${section==="Electrical"?"active-elec":""}" onclick="selectSection('Electrical')">⚡ Electrical</button>
+          <button type="button" class="section-btn ${section==="Operation"?"active-oper":""}"  onclick="selectSection('Operation')">🏗️ Operation</button>
+        </div>
+        <input type="hidden" id="f-section" value="${esc(section)}">
+      </div>
+
+      <div class="toggle-row">
+        <input type="checkbox" id="f-online" ${isOnline?"checked":""} onchange="toggleOnline()">
+        <label for="f-online">Online Permit (no isolation required)</label>
+      </div>
+
+      <div id="iso-field" class="field" style="${isOnline?"display:none":""}">
+        <label>Isolation Time</label>
+        <div class="time-row">
+          <input id="f-isoTime" type="time" value="${esc(p.isolationTime||"")}">
+          <button type="button" class="now-btn" onclick="stampNow('f-isoTime')">Now</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Issue Time</label>
+        <div class="time-row">
+          <input id="f-issueTime" type="time" value="${esc(p.issueTime||"")}">
+          <button type="button" class="now-btn" onclick="stampNow('f-issueTime')">Now</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Permit Status</label>
+        <div class="ext-ret-row">
+          <button type="button" class="ext-ret-btn ${showExt?"active-ext":""}" id="btn-extended" onclick="selectStatus(${showExt?"''":`'extended'`})">⏰ Extended</button>
+          <button type="button" class="ext-ret-btn ${showRet?"active-ret":""}" id="btn-returned" onclick="selectStatus(${showRet?"''":`'returned'`})">🔁 Returned</button>
+        </div>
+        <input type="hidden" id="f-status" value="${esc(status)}">
+      </div>
+
+      <div id="ext-time-field" class="field" style="${showExt?"":"display:none"}">
+        <label>Extended Time</label>
+        <div class="time-row">
+          <input id="f-extTime" type="time" value="${esc(p.extendedTime||"")}">
+          <button type="button" class="now-btn" onclick="stampNow('f-extTime')">Now</button>
+        </div>
+      </div>
+
+      <div id="ret-time-field" class="field" style="${showRet?"":"display:none"}">
+        <label>Returned Time</label>
+        <div class="time-row">
+          <input id="f-retTime" type="time" value="${esc(p.returnedTime||"")}">
+          <button type="button" class="now-btn" onclick="stampNow('f-retTime')">Now</button>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        ${isEdit?`<button type="button" class="btn-danger" onclick="confirmDelete()">Delete</button>`:""}
+        <button type="button" class="btn-primary" id="save-btn" onclick="savePermit(${isEdit})">
+          ${isEdit?"Update Permit":"Add Permit"}
+        </button>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════
+//  SAVE / DELETE
+// ══════════════════════════════════════
+async function savePermit(isEdit) {
+  const orderNo        = document.getElementById("f-orderNo").value.trim();
+  const jobDescription = document.getElementById("f-jobDesc").value.trim();
+  const receiver       = document.getElementById("f-receiver").value.trim();
+  const contactNo      = document.getElementById("f-contact").value.trim();
+  const section        = document.getElementById("f-section").value.trim();
+  const status         = document.getElementById("f-status").value.trim();
+  const isOnline       = document.getElementById("f-online").checked;
+  const isolationTime  = isOnline?"":(document.getElementById("f-isoTime").value||"");
+  const issueTime      = document.getElementById("f-issueTime").value||"";
+  const extendedTime   = document.getElementById("f-extTime")?.value||"";
+  const returnedTime   = document.getElementById("f-retTime")?.value||"";
+
+  if (!orderNo||!jobDescription||!receiver) { alert("Order No, Job Description and Receiver are required."); return; }
+  if (!section) { alert("Please select a Section."); return; }
+
+  const btn = document.getElementById("save-btn");
+  btn.disabled=true; btn.textContent="Saving...";
+
+  try {
+    const permit = { orderNo, jobDescription, receiver, contactNo, section, status, isOnline, isolationTime, issueTime, extendedTime, returnedTime, issuer:meta.issuer, shiftDate:meta.date, shift:meta.shift };
+    if (isEdit) { permit.id=editingPermit.id; await api("update",{permit}); }
+    else { await api("add",{permit}); }
+    removeModal(); await doRefresh();
+  } catch(err) {
+    alert("Save failed: "+err.message);
+    btn.disabled=false; btn.textContent=isEdit?"Update Permit":"Add Permit";
+  }
+}
+
+async function confirmDelete() {
+  if (!confirm("Delete this permit entry?")) return;
+  try { await api("delete",{id:editingPermit.id}); removeModal(); await doRefresh(); }
+  catch(err) { alert("Delete failed: "+err.message); }
+}
+
+function openAdd() { showModal(permitFormHTML("New Permit",{},false)); }
+function openEdit(id) {
+  editingPermit = permits.find(p=>String(p.id)===String(id));
+  if (!editingPermit) { alert("Could not find permit. Try refreshing."); return; }
+  showModal(permitFormHTML("Edit Permit",editingPermit,true));
+}
+
+// ══════════════════════════════════════
+//  SETUP
+// ══════════════════════════════════════
+function openSetup() {
+  showModal(`
+    <div class="modal-header"><span class="modal-title">Shift Setup</span><button class="close-btn" onclick="removeModal()">×</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#64748b;margin-bottom:16px">Each phone sets its own issuer name. Date and shift are shared.</p>
+      <div class="field"><label>Date</label><input id="s-date" type="date" value="${meta.date.split("/").reverse().join("-")}"></div>
+      <div class="field"><label>Shift</label><select id="s-shift">${["A","B","C","G"].map(s=>`<option ${meta.shift===s?"selected":""}>${s}</option>`).join("")}</select></div>
+      <div class="field"><label>Your Name (Issuer)</label><input id="s-issuer" placeholder="e.g. Omkar" value="${esc(meta.issuer||"")}"></div>
+      <button class="btn-primary" onclick="saveSetup()">Save & Continue</button>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9">
+        <button onclick="resetUrl()" style="background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer">Change API URL</button>
+      </div>
+    </div>`);
+}
+
+async function saveSetup() {
+  const parts=document.getElementById("s-date").value.split("-");
+  meta={ date:`${parts[2]}/${parts[1]}/${parts[0]}`, shift:document.getElementById("s-shift").value, issuer:document.getElementById("s-issuer").value.trim() };
+  try { await api("setMeta",{meta}); removeModal(); render(); }
+  catch(err) { alert("Failed: "+err.message); }
+}
+
+function saveUrl() {
+  const url=document.getElementById("url-input").value.trim();
+  if (!url.startsWith("https://script.google.com")) { alert("Please paste a valid Google Apps Script URL."); return; }
+  API_URL=url; localStorage.setItem("ars2_api_url",url); init();
+}
+function resetUrl() {
+  if (!confirm("Reset API URL?")) return;
+  API_URL=""; localStorage.removeItem("ars2_api_url"); removeModal(); render();
+}
+
+function setFilter(s) { sectionFilter=s; render(); }
+function switchView(v) { currentView=v; render(); }
+
+async function doRefresh() {
+  if (!API_URL) return;
+  syncing=true; render();
+  try { await loadAll(); } catch(err) { console.error(err); }
+  syncing=false; render();
+}
+
+async function init() {
+  render(); if (!API_URL) return;
+  await doRefresh();
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(doRefresh,20000);
+}
+
+init();
+</script>
+</body>
+</html>
