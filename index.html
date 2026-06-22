@@ -374,50 +374,20 @@ function renderConfig() {
 //  EXPORT & SHARE
 // ══════════════════════════════════════
 async function captureReportImage() {
-  // Find the container element that holds the entire report table
-  const reportElement = document.querySelector('.report-container') || document.querySelector('.card');
-  
-  if (!reportElement) {
-    alert("Please switch to the Report view first before capturing.");
-    return;
-  }
-
-  // Show a temporary loading alert
+  const reportElement = document.querySelector('.report-table-wrap');
+  if (!reportElement) { alert("Report table not found."); return; }
   const btn = document.getElementById('capture-btn');
   const originalText = btn.innerText;
-  btn.innerText = "📸 Generating Image...";
-  btn.disabled = true;
-
+  btn.innerText = "⏳ Saving..."; btn.disabled = true;
   try {
-    // Generate the image canvas from the HTML element
-    const canvas = await html2canvas(reportElement, {
-      scale: 2, // Double resolution for crisp text clarity (like Excel)
-      backgroundColor: '#ffffff', // Clean white background
-      useCORS: true
-    });
-
-    // Convert canvas to a image download link
+    const canvas = await html2canvas(reportElement, { scale: 2, backgroundColor: '#ffffff' });
     const imageUri = canvas.toDataURL("image/png");
     const downloadLink = document.createElement("a");
-    
-    // Name the file dynamically based on current selected date
-    const fileNameDate = meta.date.replace(/\//g, "-");
-    downloadLink.download = `Permit_Report_${fileNameDate}_Shift_${meta.shift}.png`;
+    downloadLink.download = `Permit_Report_${meta.date.replace(/\//g, "-")}_Shift_${meta.shift}.png`;
     downloadLink.href = imageUri;
-    
-    // Trigger download
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
-
-  } catch (error) {
-    console.error("Capture failed:", error);
-    alert("Failed to capture image. Please try again.");
-  } finally {
-    // Restore button state
-    btn.innerText = originalText;
-    btn.disabled = false;
-  }
+    document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
+  } catch (error) { alert("Capture failed. Try taking a normal screenshot."); }
+  finally { btn.innerText = originalText; btn.disabled = false; }
 }
  
 function exportExcel() {
