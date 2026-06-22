@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>ARS-2 Permit Tracker</title>
+<title>ARS-2 Permit Tracker</title> 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; }
@@ -328,12 +329,13 @@ function renderReport() {
 
   return `<div class="report">
     <div class="report-header">
-      <h2>PERMIT TRACKER — ARS-2</h2>
+      <h2>PERMIT TRACKER — ARS</h2>
       <p>Date: ${esc(meta.date)} &nbsp;·&nbsp; Shift: ${esc(meta.shift)}</p>
     </div>
     <div class="report-actions">
       <button class="btn-excel" onclick="exportExcel()">📥 Export Excel</button>
       <button class="btn-share" onclick="shareReport()">📤 Share</button>
+      <button id="capture-btn" onclick="captureReportImage()" style="background:#10b981; color:white;">📸 Save Image</button>
     </div>
     <div class="report-table-wrap">
       <table id="report-table">
@@ -371,6 +373,53 @@ function renderConfig() {
 // ══════════════════════════════════════
 //  EXPORT & SHARE
 // ══════════════════════════════════════
+async function captureReportImage() {
+  // Find the container element that holds the entire report table
+  const reportElement = document.querySelector('.report-container') || document.querySelector('.card');
+  
+  if (!reportElement) {
+    alert("Please switch to the Report view first before capturing.");
+    return;
+  }
+
+  // Show a temporary loading alert
+  const btn = document.getElementById('capture-btn');
+  const originalText = btn.innerText;
+  btn.innerText = "📸 Generating Image...";
+  btn.disabled = true;
+
+  try {
+    // Generate the image canvas from the HTML element
+    const canvas = await html2canvas(reportElement, {
+      scale: 2, // Double resolution for crisp text clarity (like Excel)
+      backgroundColor: '#ffffff', // Clean white background
+      useCORS: true
+    });
+
+    // Convert canvas to a image download link
+    const imageUri = canvas.toDataURL("image/png");
+    const downloadLink = document.createElement("a");
+    
+    // Name the file dynamically based on current selected date
+    const fileNameDate = meta.date.replace(/\//g, "-");
+    downloadLink.download = `Permit_Report_${fileNameDate}_Shift_${meta.shift}.png`;
+    downloadLink.href = imageUri;
+    
+    // Trigger download
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+
+  } catch (error) {
+    console.error("Capture failed:", error);
+    alert("Failed to capture image. Please try again.");
+  } finally {
+    // Restore button state
+    btn.innerText = originalText;
+    btn.disabled = false;
+  }
+}
+ 
 function exportExcel() {
   const headers = ["#","Order No","Type","Section","Job Description","Receiver","Contact","Isolation Time","Issue Time","Extended Time","Returned Time","Permit Type","Issued By"];
   const ap = activePermits();
