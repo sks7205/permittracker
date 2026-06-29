@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>ARS-2 Permit Tracker</title> 
+<title>Permit Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -104,6 +104,7 @@
   .btn-row { display: flex; gap: 10px; margin-top: 6px; }
   .btn-primary { flex: 1; background: #1e3a5f; color: white; border: none; border-radius: 12px; padding: 15px; font-size: 16px; font-weight: 700; cursor: pointer; }
   .btn-primary:disabled { opacity: 0.5; }
+  .btn-secondary { background: #f1f5f9; border: 1.5px solid #e2e8f0; color: #1e3a5f; border-radius: 12px; padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; width:100%; }
   .btn-danger { background: #fff1f2; border: 1.5px solid #fecdd3; color: #e11d48; border-radius: 12px; padding: 15px 18px; font-size: 14px; font-weight: 700; cursor: pointer; }
 
   .report { padding: 12px 14px 40px; }
@@ -126,9 +127,19 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .config-screen { padding: 20px 16px; }
   .config-screen h2 { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+  /* Scan permit */
+  .scan-choice { display: flex; gap: 10px; margin-bottom: 18px; }
+  .scan-choice button { flex:1; padding:16px 8px; border-radius:14px; border:2px solid #e2e8f0; background:#f8fafc; font-size:13px; font-weight:700; cursor:pointer; color:#1e293b; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .scan-choice button span { font-size:28px; }
+  .scan-choice button:active { background:#eff6ff; border-color:#3b82f6; }
+  .scan-status { background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:10px; padding:12px; font-size:13px; color:#1d4ed8; margin-bottom:16px; text-align:center; display:none; }
+  .scan-preview { width:100%; border-radius:10px; margin-bottom:12px; display:none; max-height:200px; object-fit:cover; }
+  #scan-file { display:none; }
+
   .config-screen p { font-size: 13px; color: #64748b; margin-bottom: 20px; line-height: 1.6; }
   .hint-box { background: #fef9c3; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; font-size: 12px; color: #92400e; margin-bottom: 16px; line-height: 1.6; }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -141,7 +152,15 @@
 // ══════════════════════════════════════
 let API_URL = localStorage.getItem("ars2_api_url") || "";
 let permits = [];
-let meta = { date: todayStr(), shift: "A", issuer: "" };
+// meta is stored per-phone in localStorage — never overwritten by sheet
+function loadMeta() {
+  try {
+    const saved = localStorage.getItem("ars2_meta");
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return { date: todayStr(), shift: "", issuer: "" };
+}
+let meta = loadMeta();
 let currentView = "list";
 let sectionFilter = "ALL";
 let editingPermit = null;
@@ -193,9 +212,9 @@ async function api(action, body={}) {
 }
 
 async function loadAll() {
-  const [p,m] = await Promise.all([api("getAll"),api("getMeta")]);
+  // Only load permits from server — meta is per-phone (localStorage)
+  const p = await api("getAll");
   permits = (p.permits||[]).map(x=>({...x, id:String(x.id)}));
-  meta = m.meta || meta;
   lastSync = new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
 }
 
@@ -211,7 +230,6 @@ function activePermits() {
     return d === meta.date && s === meta.shift;
   });
 }
-
 function render() {
   const app = document.getElementById("app");
   if (!API_URL) { app.innerHTML = renderConfig(); return; }
@@ -228,7 +246,7 @@ function renderHeader() {
   return `<div class="header">
     <div class="header-top">
       <div>
-        <div class="header-label">ARS-2 · Permit Tracker</div>
+        <div class="header-label">Permit Tracker</div>
         <div class="header-title">${esc(meta.date)} · Shift ${esc(meta.shift)}</div>
         ${meta.issuer?`<div class="header-sub">${esc(meta.issuer)}</div>`:""}
       </div>
@@ -329,7 +347,7 @@ function renderReport() {
 
   return `<div class="report">
     <div class="report-header">
-      <h2>PERMIT TRACKER — ARS</h2>
+      <h2>PERMIT TRACKER</h2>
       <p>Date: ${esc(meta.date)} &nbsp;·&nbsp; Shift: ${esc(meta.shift)}</p>
     </div>
     <div class="report-actions">
@@ -423,7 +441,9 @@ async function captureReportImage() {
     btn.disabled = false; 
   }
 }
- 
+
+
+
 function exportExcel() {
   const headers = ["#","Order No","Type","Section","Job Description","Receiver","Contact","Isolation Time","Issue Time","Extended Time","Returned Time","Permit Type","Issued By"];
   const ap = activePermits();
@@ -447,7 +467,7 @@ function exportExcel() {
 function shareReport() {
   const ap2 = activePermits();
   const lines = [
-    `ARS-2 PERMIT TRACKER`,`Date: ${meta.date}  Shift: ${meta.shift}`,`─────────────────────`,
+    `PERMIT TRACKER`,`Date: ${meta.date}  Shift: ${meta.shift}`,`─────────────────────`,
     ...ap2.map((p,i)=>{
       const oType=classifyOrder(p.orderNo);
       return [`${i+1}. Order: ${p.orderNo} [${oType}] | ${p.section||""}`,
@@ -737,6 +757,110 @@ function permitFormHTML(title, p={}, isEdit=false) {
     </div>`;
 }
 
+
+// ══════════════════════════════════════
+//  SCAN PERMIT via Tesseract OCR
+// ══════════════════════════════════════
+function startScan() {
+  showModal(`
+    <div class="modal-header">
+      <span class="modal-title">📷 Scan Permit</span>
+      <button class="close-btn" onclick="removeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#64748b;margin-bottom:14px">
+        Take a clear photo of the permit. Point camera at the top section showing <b>Order No</b> and <b>Description of Work</b>.
+      </p>
+      <img id="scan-preview" class="scan-preview">
+      <div id="scan-status" class="scan-status">⏳ Reading permit...</div>
+      <input type="file" id="scan-file" accept="image/*" capture="environment" onchange="processScan(this)">
+      <button class="btn-primary" onclick="document.getElementById('scan-file').click()">
+        📷 Open Camera
+      </button>
+      <button class="btn-secondary" style="margin-top:10px;width:100%" onclick="showPermitForm()">
+        ✏️ Skip — Enter Manually
+      </button>
+    </div>`);
+}
+
+async function processScan(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  // Show preview
+  const preview = document.getElementById("scan-preview");
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = "block";
+
+  const status = document.getElementById("scan-status");
+  status.style.display = "block";
+  status.innerHTML = "⏳ Reading permit... this takes ~10 seconds";
+
+  try {
+    const result = await Tesseract.recognize(file, "eng", {
+      logger: m => {
+        if (m.status === "recognizing text") {
+          const pct = Math.round(m.progress * 100);
+          if (status) status.innerHTML = "⏳ Reading... " + pct + "%";
+        }
+      }
+    });
+
+    const text = result.data.text;
+    console.log("OCR raw text:", text);
+
+    // Extract Order No — find 8 or 9 digit number
+    // Permit format: Order No/HW  14054013/200664255
+    // We want the FIRST number before the slash — the work order
+    const orderMatch = text.match(/\b(1\d{7}|[1-4]\d{8})\b/);
+    const orderNo = orderMatch ? orderMatch[1] : "";
+
+    // Extract Description of Work
+    // Label on permit: "Description of Work"
+    const descMatch = text.match(/Description\s+of\s+Work[:\s]+([^\n]+)/i);
+    let jobDesc = descMatch ? descMatch[1].trim() : "";
+    // Clean up OCR noise — remove leading punctuation
+    jobDesc = jobDesc.replace(/^[^a-zA-Z0-9]+/, "").trim();
+
+    status.style.display = "none";
+
+    if (!orderNo && !jobDesc) {
+      status.style.display = "block";
+      status.style.background = "#fff1f2";
+      status.style.borderColor = "#fecdd3";
+      status.style.color = "#be123c";
+      status.innerHTML = "⚠️ Could not read permit clearly. Try better lighting or enter manually.";
+      return;
+    }
+
+    // Open form with extracted values pre-filled
+    removeModal();
+    showPermitForm({ orderNo, jobDescription: jobDesc });
+
+    // Show what was found
+    if (orderNo || jobDesc) {
+      setTimeout(() => {
+        const banner = document.createElement("div");
+        banner.style = "background:#dcfce7;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;font-size:12px;color:#16a34a;margin-bottom:14px";
+        banner.innerHTML = "✅ Scanned: " +
+          (orderNo ? "<b>Order " + orderNo + "</b> " : "") +
+          (jobDesc ? "· " + jobDesc.slice(0,40) + (jobDesc.length>40?"...":"") : "");
+        const body = document.querySelector(".modal-body");
+        if (body) body.insertBefore(banner, body.firstChild);
+      }, 100);
+    }
+
+  } catch(err) {
+    console.error("OCR error:", err);
+    if (status) {
+      status.style.display = "block";
+      status.style.background = "#fff1f2";
+      status.style.color = "#be123c";
+      status.innerHTML = "❌ Scan failed. Please enter manually.";
+    }
+  }
+}
+
 // ══════════════════════════════════════
 //  SAVE / DELETE
 // ══════════════════════════════════════
@@ -776,7 +900,30 @@ async function confirmDelete() {
   catch(err) { alert("Delete failed: "+err.message); }
 }
 
-function openAdd() { showModal(permitFormHTML("New Permit",{},false)); }
+function openAdd() {
+  showModal(`
+    <div class="modal-header">
+      <span class="modal-title">New Permit</span>
+      <button class="close-btn" onclick="removeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#64748b;margin-bottom:14px">How do you want to add this permit?</p>
+      <div class="scan-choice">
+        <button onclick="startScan()">
+          <span>📷</span>
+          Scan Permit
+        </button>
+        <button onclick="showPermitForm()">
+          <span>✏️</span>
+          Enter Manually
+        </button>
+      </div>
+    </div>`);
+}
+
+function showPermitForm(prefill={}) {
+  showModal(permitFormHTML("New Permit", prefill, false));
+}
 function openEdit(id) {
   editingPermit = permits.find(p=>String(p.id)===String(id));
   if (!editingPermit) { alert("Could not find permit. Try refreshing."); return; }
@@ -802,10 +949,16 @@ function openSetup() {
 }
 
 async function saveSetup() {
-  const parts=document.getElementById("s-date").value.split("-");
-  meta={ date:`${parts[2]}/${parts[1]}/${parts[0]}`, shift:document.getElementById("s-shift").value, issuer:document.getElementById("s-issuer").value.trim() };
-  try { await api("setMeta",{meta}); removeModal(); render(); }
-  catch(err) { alert("Failed: "+err.message); }
+  const parts = document.getElementById("s-date").value.split("-");
+  meta = {
+    date:   parts[2]+"/"+parts[1]+"/"+parts[0],
+    shift:  document.getElementById("s-shift").value,
+    issuer: document.getElementById("s-issuer").value.trim()
+  };
+  // Save to localStorage — this is the source of truth for meta
+  localStorage.setItem("ars2_meta", JSON.stringify(meta));
+  removeModal();
+  render();
 }
 
 function saveUrl() {
