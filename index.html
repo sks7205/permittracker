@@ -781,6 +781,7 @@ function startScan() {
       </button>
     </div>`);
 }
+
 async function processScan(input) {
   const file = input.files[0];
   if (!file) return;
@@ -793,7 +794,7 @@ async function processScan(input) {
   status.style.display = "block";
   status.style.background = "#eff6ff";
   status.style.color = "#1d4ed8";
-  status.innerHTML = "⏳ AI is reading permit layout... (takes 2-3s)";
+  status.innerHTML = "⏳ Gemini AI is reading permit layout... (takes 2-3s)";
 
   const reader = new FileReader();
   reader.readAsDataURL(file);
@@ -802,8 +803,8 @@ async function processScan(input) {
       // Isolate the pure Base64 array out from the DataURL string prefix
       const base64Image = reader.result.split(',')[1];
 
-      // Request OCR parsing explicitly via our updated app-script route
-      const result = await apiCall("ocrPermit", { base64Image: base64Image });
+      // CORRECTED: Using api() instead of apiCall() to match your code structure
+      const result = await api("ocrPermit", { base64Image: base64Image });
 
       if (!result || result.error) {
         throw new Error(result ? result.error : "Network error contacting server backend.");
@@ -826,7 +827,6 @@ async function processScan(input) {
     }
   };
 }
-
 // ══════════════════════════════════════
 //  SAVE / DELETE
 // ══════════════════════════════════════
