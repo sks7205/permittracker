@@ -827,34 +827,6 @@ async function processScan(input) {
   };
 }
 
-    // Open form with extracted values pre-filled
-    removeModal();
-    showPermitForm({ orderNo, jobDescription: jobDesc });
-
-    // Show what was found
-    if (orderNo || jobDesc) {
-      setTimeout(() => {
-        const banner = document.createElement("div");
-        banner.style = "background:#dcfce7;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;font-size:12px;color:#16a34a;margin-bottom:14px";
-        banner.innerHTML = "✅ Scanned: " +
-          (orderNo ? "<b>Order " + orderNo + "</b> " : "") +
-          (jobDesc ? "· " + jobDesc.slice(0,40) + (jobDesc.length>40?"...":"") : "");
-        const body = document.querySelector(".modal-body");
-        if (body) body.insertBefore(banner, body.firstChild);
-      }, 100);
-    }
-
-  } catch(err) {
-    console.error("OCR error:", err);
-    if (status) {
-      status.style.display = "block";
-      status.style.background = "#fff1f2";
-      status.style.color = "#be123c";
-      status.innerHTML = "❌ Scan failed. Please enter manually.";
-    }
-  }
-}
-
 // ══════════════════════════════════════
 //  SAVE / DELETE
 // ══════════════════════════════════════
