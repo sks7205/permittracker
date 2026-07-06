@@ -522,9 +522,17 @@ function acGetSuggestions(field, query) {
   const q = query.toLowerCase();
   const seen = new Set();
   return permits
-    .map(p=>String(p[field]||"").trim())
-    .filter(v=>{ if(!v||seen.has(v)) return false; seen.add(v); return v.toLowerCase().includes(q); })
-    .slice(0,7);
+    .map(p => {
+        // Safely convert whatever value exists to a string first
+        const val = p[field] !== undefined && p[field] !== null ? String(p[field]) : "";
+        return val.trim();
+    })
+    .filter(v => {
+        if (!v || seen.has(v)) return false;
+        seen.add(v);
+        return v.toLowerCase().includes(q);
+    })
+    .slice(0, 7);
 }
 
 function acShow(field, inputId, listId) {
@@ -566,6 +574,11 @@ function acShow(field, inputId, listId) {
         const match = permits.find(p=>p.receiver===value&&p.contactNo);
         if (match) { const c=document.getElementById("f-contact"); if(c&&!c.value) c.value=match.contactNo; }
       }
+      // Auto-fill job description when order number picked
+      if (store.field==="orderNo") {
+        const match = permits.find(p=>p.orderNo==value && p.jobDescription);
+        if (match) { const jd=document.getElementById("f-jobDesc"); if (jd && !jd.value) jd.value = match.jobDescription; }
+      }
     };
     el.addEventListener("touchend", handler, {passive:false});
     el.addEventListener("click", handler);
@@ -588,12 +601,16 @@ document.addEventListener("click", e=>{
 }, true);
 
 function onOrderInput(val) {
-  const type = classifyOrder(val);
-  const el = document.getElementById("order-type-preview");
-  if (!el) return;
-  el.innerHTML = type&&type!=="—"
-    ? `Type: <b class="badge ${orderTypeBadgeCls(type)}" style="font-size:11px">${type}</b>`
-    : val.length>0?`<span style="color:#94a3b8">No match — ${val.length} digit(s)</span>`:"";
+    const type = classifyOrder(val);
+    const el = document.getElementById("order-type-preview");
+    if (el) {
+        el.innerHTML = type && type !== "-" 
+            ? `Type: <b class="badge ${orderTypeBadgeCls(type)}" style="font-size:11px">${type}</b>` 
+            : val.length > 0 ? `<span style="color:#94a3b8">No match - ${val.length} digit(s)</span>` : "";
+    }
+    
+    // Explicitly call autocomplete logic AFTER the DOM update is handled
+    acShow('orderNo', 'f-orderNo', 'ac-orderNo');
 }
 
 function selectSection(sec) {
@@ -648,14 +665,19 @@ function permitFormHTML(title, p={}, isEdit=false) {
     <div class="modal-body">
 
       <div class="field">
-        <label>Order No *</label>
+    <label>Order No *</label>
+    <div class="ac-wrap">
         <input id="f-orderNo" type="text" inputmode="numeric" pattern="[0-9]*"
-          placeholder="e.g. 450312" value="${esc(p.orderNo||"")}"
-          oninput="onOrderInput(this.value)" autocomplete="off">
+               placeholder="e.g. 450312" value="${esc(p.orderNo||"")}"
+               oninput="onOrderInput(this.value)"
+               onfocus="acShow('orderNo','f-orderNo','ac-orderNo')"
+               autocomplete="off">
         <div class="order-type-preview" id="order-type-preview">
-          ${oType&&oType!=="—"?`Type: <b>${oType}</b>`:""}
+            ${oType&&oType!=="-"?`Type: <b>${oType}</b>`:''}
         </div>
-      </div>
+        <div class="ac-list" id="ac-orderNo"></div>
+    </div>
+</div>
 
       <div class="field">
         <label>Job Description *</label>
