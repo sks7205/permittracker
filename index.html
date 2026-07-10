@@ -350,11 +350,6 @@ function renderReport() {
       <h2>PERMIT TRACKER</h2>
       <p>Date: ${esc(meta.date)} &nbsp;·&nbsp; Shift: ${esc(meta.shift)}</p>
     </div>
-    <div class="report-actions">
-      <button class="btn-excel" onclick="exportExcel()">📥 Export Excel</button>
-      <button class="btn-share" onclick="shareReport()">📤 Share</button>
-      <button id="capture-btn" onclick="captureReportImage()" style="background:#10b981; color:white;">📸 Save Image</button>
-    </div>
     <div class="report-table-wrap">
       <table id="report-table">
         <thead><tr>
@@ -365,6 +360,11 @@ function renderReport() {
         </tr></thead>
         <tbody>${rows||`<tr><td colspan="13" style="text-align:center;color:#94a3b8;padding:20px">No permits</td></tr>`}</tbody>
       </table>
+    </div>
+    <div class="report-actions">
+      <button class="btn-excel" onclick="exportExcel()">📥 Export Excel</button>
+      <button class="btn-share" onclick="shareReport()">📤 Share</button>
+      <button id="capture-btn" onclick="captureReportImage()" style="background:#10b981; color:white;">📸 Save Image</button>
     </div>
     <p class="report-hint">📸 Screenshot · or use Export / Share above</p>
   </div>`;
