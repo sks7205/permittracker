@@ -412,10 +412,10 @@ async function captureReportImage() {
     tableWrap.style.overflow = "visible";
 
     // Capture the entire expanded component
-    const canvas = await html2canvas(tableWrap, { 
+    const canvas = await html2canvas(reportContainer, { 
       scale: 2,               // Keeps the text looking sharp like Excel
       backgroundColor: '#ffffff',
-      windowWidth: table.scrollWidth, // Ensures full rendering matrix
+      windowWidth: table.scrollWidth + 32, // Ensures full rendering matrix
       useCORS: true
     });
 
