@@ -350,6 +350,11 @@ function renderReport() {
       <h2>PERMIT TRACKER</h2>
       <p>Date: ${esc(meta.date)} &nbsp;·&nbsp; Shift: ${esc(meta.shift)}</p>
     </div>
+    <div class="report-actions">
+      <button class="btn-excel" onclick="exportExcel()">📥 Export Excel</button>
+      <button class="btn-share" onclick="shareReport()">📤 Share</button>
+      <button id="capture-btn" onclick="captureReportImage()" style="background:#10b981; color:white;">📸 Save Image</button>
+    </div>
     <div class="report-table-wrap">
       <table id="report-table">
         <thead><tr>
@@ -360,11 +365,6 @@ function renderReport() {
         </tr></thead>
         <tbody>${rows||`<tr><td colspan="13" style="text-align:center;color:#94a3b8;padding:20px">No permits</td></tr>`}</tbody>
       </table>
-    </div>
-    <div class="report-actions">
-      <button class="btn-excel" onclick="exportExcel()">📥 Export Excel</button>
-      <button class="btn-share" onclick="shareReport()">📤 Share</button>
-      <button id="capture-btn" onclick="captureReportImage()" style="background:#10b981; color:white;">📸 Save Image</button>
     </div>
     <p class="report-hint">📸 Screenshot · or use Export / Share above</p>
   </div>`;
@@ -395,37 +395,43 @@ async function captureReportImage() {
   const reportContainer = document.querySelector('.report');
   const tableWrap = document.querySelector('.report-table-wrap');
   const table = document.getElementById('report-table');
-  if (!reportContainer || !tableWrap || !table) { alert("Report table not found."); return; }
+  const actions = document.querySelector('.report-actions');
+  const hint = document.querySelector('.report-hint');
+  
+  if (!reportContainer || !tableWrap || !table) { 
+    alert("Report components not found."); 
+    return; 
+  }
 
   const btn = document.getElementById('capture-btn');
   const originalText = btn.innerText;
   btn.innerText = "⏳ Capturing Full View..."; 
   btn.disabled = true;
 
-  // Save the original structural styles
+  // Save original structural and visibility styles
   const oldWidth = tableWrap.style.width;
   const oldOverflow = tableWrap.style.overflow;
+  const oldActionsDisplay = actions ? actions.style.display : "";
+  const oldHintDisplay = hint ? hint.style.display : "";
 
   try {
+    // 1. Hide interactive elements so they don't show up in the image
     if (actions) actions.style.display = "none";
     if (hint) hint.style.display = "none";
-    // FORCE the container to expand completely to the hidden table width
+
+    // 2. FORCE the table container to expand completely to its maximum width
     tableWrap.style.width = table.scrollWidth + "px";
     tableWrap.style.overflow = "visible";
 
-    // Capture the entire expanded component
+    // 3. Capture the entire report wrapper container
     const canvas = await html2canvas(reportContainer, { 
-      scale: 2,               // Keeps the text looking sharp like Excel
-      backgroundColor: '#ffffff',
-      windowWidth: table.scrollWidth + 32, // Ensures full rendering matrix
+      scale: 2,                       // Keeps text looking sharp
+      backgroundColor: '#f1f5f9',     // Matches app body background color
+      windowWidth: table.scrollWidth + 32, // Accommodate the full table width matrix + padding
       useCORS: true
     });
 
-    // Reset styles back to mobile view layout immediately
-    tableWrap.style.width = oldWidth;
-    tableWrap.style.overflow = oldOverflow;
-
-    // Trigger the file download
+    // Trigger file download
     const imageUri = canvas.toDataURL("image/png");
     const downloadLink = document.createElement("a");
     downloadLink.download = `Permit_Report_${meta.date.replace(/\//g, "-")}_Shift_${meta.shift}.png`;
@@ -435,11 +441,15 @@ async function captureReportImage() {
     document.body.removeChild(downloadLink);
 
   } catch (error) { 
-    // Fallback cleanup in case of execution errors
-    tableWrap.style.width = oldWidth;
-    tableWrap.style.overflow = oldOverflow;
+    console.error(error);
     alert("Capture failed. Try taking a normal screenshot."); 
   } finally { 
+    // Reset all original structural layouts and view states back to normal
+    tableWrap.style.width = oldWidth;
+    tableWrap.style.overflow = oldOverflow;
+    if (actions) actions.style.display = oldActionsDisplay;
+    if (hint) hint.style.display = oldHintDisplay;
+    
     btn.innerText = originalText; 
     btn.disabled = false; 
   }
