@@ -392,9 +392,10 @@ function renderConfig() {
 //  EXPORT & SHARE
 // ══════════════════════════════════════
 async function captureReportImage() {
+  const reportContainer = document.querySelector('.report');
   const tableWrap = document.querySelector('.report-table-wrap');
   const table = document.getElementById('report-table');
-  if (!tableWrap || !table) { alert("Report table not found."); return; }
+  if (!reportContainer || !tableWrap || !table) { alert("Report table not found."); return; }
 
   const btn = document.getElementById('capture-btn');
   const originalText = btn.innerText;
