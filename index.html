@@ -407,6 +407,8 @@ async function captureReportImage() {
   const oldOverflow = tableWrap.style.overflow;
 
   try {
+    if (actions) actions.style.display = "none";
+    if (hint) hint.style.display = "none";
     // FORCE the container to expand completely to the hidden table width
     tableWrap.style.width = table.scrollWidth + "px";
     tableWrap.style.overflow = "visible";
