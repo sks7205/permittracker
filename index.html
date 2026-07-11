@@ -171,6 +171,75 @@ let refreshTimer = null;
 // ══════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════
+function extendUnaccountedPermit(id) {
+  const oldPermit = permits.find(p => String(p.id) === String(id));
+  if (!oldPermit) return;
+  
+  // Pre-fill the form with the old data, but force the status to 'extended'
+  // and clear out the old isolation/issue times so you can stamp them fresh if needed
+  const prefill = {
+    ...oldPermit,
+    status: "extended",
+    isolationTime: "",
+    issueTime: "",
+    extendedTime: nowTime()
+  };
+  
+  // Open as a NEW permit (not an edit) so it saves to the current shift's log
+  showPermitForm(prefill);
+}
+function getPreviousShift(currentDateStr, currentShift) {
+  const parts = currentDateStr.split("/");
+  if (parts.length !== 3) return null;
+  
+  // Create a proper Date object (Month is 0-indexed in JS)
+  let d = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
+  let prevShift = "";
+
+  if (currentShift === "B") { 
+    prevShift = "A"; 
+  } else if (currentShift === "C") { 
+    prevShift = "B"; 
+  } else if (currentShift === "A") { 
+    prevShift = "C";
+    d.setDate(d.getDate() - 1); // Subtract one day for the A -> C handover
+  } else {
+    // If it's "G" (General) or an unknown shift, we can't reliably predict the handover
+    return null; 
+  }
+
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+
+  return { date: `${dd}/${mm}/${yyyy}`, shift: prevShift };
+}
+function unaccountedPermits() {
+  const prev = getPreviousShift(meta.date, meta.shift);
+  if (!prev) return []; 
+
+  // Get all permits already logged in the PRESENT shift
+  const currentShiftPermits = activePermits();
+
+  return permits.filter(p => {
+    const d = String(p.shiftDate || "").trim();
+    const s = String(p.shift || "").trim();
+    
+    // 1. Only look at permits from the exact previous shift
+    if (d !== prev.date || s !== prev.shift) return false; 
+    
+    // 2. If it was properly returned by the outgoing shift, it is accounted for
+    if (p.status === "returned") return false;
+    
+    // 3. CROSS-CHECK: Has the PRESENT shift logged this exact orderNo as "extended"?
+    const isExtendedInCurrent = currentShiftPermits.some(currP => 
+      currP.orderNo === p.orderNo
+    );
+    
+    // If the present shift hasn't extended it, it remains unaccounted.
+    return !isExtendedInCurrent;
+  });
+}
 function classifyOrder(orderNo) {
   const s = String(orderNo||"").trim().replace(/\D/g,"");
   if (!s) return "";
@@ -237,12 +306,19 @@ function render() {
     ${renderHeader()}
     ${renderSyncBar()}
     ${!meta.issuer?`<div class="setup-banner" onclick="openSetup()">⚠️ Tap to set your name and shift details</div>`:""}
-    <div id="main-content">${currentView==="list"?renderList():renderReport()}</div>
+    <div id="main-content">
+      ${currentView==="list" ? renderList() : 
+        currentView==="report" ? renderReport() : 
+        renderUnaccounted()}
+    </div>
     ${currentView==="list"?`<button class="fab" onclick="openAdd()">+</button>`:""}
   `;
 }
 
 function renderHeader() {
+  const unaccountedCount = unaccountedPermits().length;
+  const alertIcon = unaccountedCount > 0 ? "🔴 " : "✅ ";
+
   return `<div class="header">
     <div class="header-top">
       <div>
@@ -258,6 +334,7 @@ function renderHeader() {
     <div class="tabs">
       <button class="tab ${currentView==="list"?"active":""}" onclick="switchView('list')">Permits (${activePermits().length})</button>
       <button class="tab ${currentView==="report"?"active":""}" onclick="switchView('report')">📋 Report</button>
+      <button class="tab ${currentView==="unaccounted"?"active":""}" onclick="switchView('unaccounted')">${alertIcon} Audit (${unaccountedCount})</button>
     </div>
   </div>`;
 }
@@ -387,10 +464,202 @@ function renderConfig() {
       <button class="btn-primary" onclick="saveUrl()">Save & Connect</button>
     </div>`;
 }
+function renderUnaccounted() {
+  const prev = getPreviousShift(meta.date, meta.shift);
+  if (!prev) return `<div class="empty"><h3>Cannot calculate previous shift.</h3></div>`;
+
+  // Calculate the Tally metrics
+  const prevPermits = permits.filter(p => p.shiftDate === prev.date && p.shift === prev.shift);
+  const currentShiftPermits = activePermits();
+  
+  let tallyReturned = 0;
+  let tallyExtended = 0;
+  let unaccountedList = [];
+
+  prevPermits.forEach(p => {
+    if (p.status === "returned") {
+      tallyReturned++;
+    } else {
+      const isExtended = currentShiftPermits.some(currP => currP.orderNo === p.orderNo);
+      if (isExtended) {
+        tallyExtended++;
+      } else {
+        unaccountedList.push(p);
+      }
+    }
+  });
+
+  // Build the rows using the exact unaccounted list
+  const rows = unaccountedList.map((p, i) => {
+    return `<tr onclick="extendUnaccountedPermit('${esc(p.id)}')" style="cursor:pointer; background: #fff1f2;">
+      <td>${i + 1}</td>
+      <td style="font-family:monospace;font-weight:700">${esc(p.orderNo)}</td>
+      <td >${esc(p.jobDescription)}</td>
+      <td>${esc(p.section || "")}</td>
+      <td>${esc(p.receiver)} <br> <a href="tel:${esc(p.contactNo)}" style="color:#2563eb;text-decoration:none">${esc(p.contactNo || "")}</a></td>
+      <td>${esc(p.issueTime || "—")}</td>
+      <td><span class="badge badge-red">Missing</span></td>
+    </tr>`;
+  }).join("");
+
+  return `<div class="report">
+    <div class="report-header" style="background: #1e293b; padding-bottom: 20px;">
+      <h2>SHIFT HANDOVER AUDIT</h2>
+      <p>Tracking permits from Shift ${esc(prev.shift)} on ${esc(prev.date)}</p>
+      <div class="report-actions">
+       <button id="capture-audit-btn" onclick="captureAuditImage()" style="background:#10b981; color:white;">📸 Save Image</button>
+      </div>
+
+      <!-- SIMPLE TALLY DASHBOARD -->
+      <div style="display:none; gap:8px; margin-top: 16px;">
+         <div style="flex:1; background:rgba(255,255,255,0.1); padding:10px 4px; border-radius:8px; text-align:center;">
+            <div style="font-size:20px; font-weight:bold; color:#f8fafc">${prevPermits.length}</div>
+            <div style="font-size:9px; color:#cbd5e1; text-transform:uppercase; margin-top:2px;">Total Prev</div>
+         </div>
+         <div style="flex:1; background:rgba(22, 163, 74, 0.2); border:1px solid rgba(22, 163, 74, 0.4); padding:10px 4px; border-radius:8px; text-align:center;">
+            <div style="font-size:20px; font-weight:bold; color:#4ade80">${tallyReturned}</div>
+            <div style="font-size:9px; color:#bbf7d0; text-transform:uppercase; margin-top:2px;">Returned</div>
+         </div>
+         <div style="flex:1; background:rgba(234, 88, 12, 0.2); border:1px solid rgba(234, 88, 12, 0.4); padding:10px 4px; border-radius:8px; text-align:center;">
+            <div style="font-size:20px; font-weight:bold; color:#fb923c">${tallyExtended}</div>
+            <div style="font-size:9px; color:#fed7aa; text-transform:uppercase; margin-top:2px;">Extended</div>
+         </div>
+         <div style="flex:1; background:rgba(225, 29, 72, 0.3); border:1px solid rgba(225, 29, 72, 0.5); padding:10px 4px; border-radius:8px; text-align:center;">
+            <div style="font-size:20px; font-weight:bold; color:#fda4af">${unaccountedList.length}</div>
+            <div style="font-size:9px; color:#fecdd3; text-transform:uppercase; margin-top:2px;">Unaccounted</div>
+         </div>
+      </div>
+    </div>
+    
+    <div class="report-table-wrap">
+      <table id="unaccounted-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Order No</th><th>Job Description</th><th>Section</th>
+            <th>Receiver / Contact</th><th>Prev Issue</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows || `<tr><td colspan="6" style="text-align:center;color:#16a34a;padding:30px;font-weight:bold;">✅ All handover permits accounted for.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    <p class="report-hint">Tap any missing permit to pull it into your shift as "Extended"</p>
+  </div>`;
+}
 
 // ══════════════════════════════════════
 //  EXPORT & SHARE
 // ══════════════════════════════════════
+async function captureAuditImage() {
+    // 1. Target the elements inside the renderUnaccounted / Audit structure
+    const reportContainer = document.querySelector('.report'); 
+    const tableWrap = document.querySelector('.report-table-wrap');
+    // Finds the table inside your unaccounted layout
+    const table = document.getElementById('unaccounted-table') || document.querySelector('.report-table-wrap table'); 
+    
+    // Target the specific wrapper where your new Save Image button sits
+    const actions = document.getElementById('capture-audit-btn')?.parentElement;
+    const hint = document.querySelector('.report-hint');
+
+    if (!reportContainer || !tableWrap || !table) {
+        alert("Audit components not found.");
+        return;
+    }
+
+    const btn = document.getElementById('capture-audit-btn');
+    const originalText = btn ? btn.innerText : "";
+    if (btn) {
+        btn.innerText = "⏳ Capturing Full View...";
+        btn.disabled = true;
+    }
+
+    // Save original styles for layout restoration
+    const oldWidth = tableWrap.style.width;
+    const oldOverflow = tableWrap.style.overflow;
+    const oldActionsDisplay = actions ? actions.style.display : "";
+    const oldHintDisplay = hint ? hint.style.display : ""; // Preserved layout structure
+
+    try {
+        // Hide the green button row so it doesn't appear in the captured image
+        if (actions) actions.style.display = "none";
+        if (hint) hint.style.display = "none";
+
+        // Force the table container to expand completely to its maximum scrollable width
+        tableWrap.style.width = table.scrollWidth + "px";
+        tableWrap.style.overflow = "visible";
+
+        // Capture the entire report wrapper container
+        const canvas = await html2canvas(reportContainer, {
+            scale: 2, // Keeps text looking sharp
+            backgroundColor: '#f1f5f9', // Matches your app's background card color
+            windowWidth: table.scrollWidth + 32, // Accommodate the full table width matrix + padding
+            useCORS: true
+        });
+
+        // Trigger file download using the preview state variables
+        const imageUri = canvas.toDataURL("image/png");
+        
+        // Grab values dynamically from your prev object seen in your render code
+        const auditDate = (typeof prev !== 'undefined' && prev.date) ? prev.date : 'Audit';
+        const auditShift = (typeof prev !== 'undefined' && prev.shift) ? prev.shift : 'Shift';
+        const fileName = `Audit_Report_${auditDate.replace(/\//g, "-")}_Shift_${auditShift}.png`;
+
+        // Check specifically for iPhone/iPad environments
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        if (isIOS) {
+            // Safe execution branch for iOS Chrome/Safari updates
+            const newWindow = window.open();
+            if (newWindow) {
+                newWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Audit Report Preview</title>
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <style>
+                                body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; }
+                                img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+                                .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 14px; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div>
+                            <img src="${imageUri}" alt="Audit Report" />
+                        </body>
+                    </html>
+                `);
+                newWindow.document.close();
+            } else {
+                alert("Pop-up blocked! Please allow pop-ups for this site to view/save the report image.");
+            }
+        } else {
+            // Kept your exact legacy desktop/Android download route completely intact
+            const downloadLink = document.createElement("a");
+            downloadLink.download = fileName;
+            downloadLink.href = imageUri;
+            
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Capture failed. Try taking a normal screenshot.");
+    } finally {
+        // Reset all original structural layouts and visibility states back to normal
+        tableWrap.style.width = oldWidth;
+        tableWrap.style.overflow = oldOverflow;
+        if (actions) actions.style.display = oldActionsDisplay;
+        if (hint) hint.style.display = oldHintDisplay; // Balanced layout cleanup
+
+        if (btn) {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
+}
 async function captureReportImage() {
   const reportContainer = document.querySelector('.report');
   const tableWrap = document.querySelector('.report-table-wrap');
@@ -433,12 +702,46 @@ async function captureReportImage() {
 
     // Trigger file download
     const imageUri = canvas.toDataURL("image/png");
-    const downloadLink = document.createElement("a");
-    downloadLink.download = `Permit_Report_${meta.date.replace(/\//g, "-")}_Shift_${meta.shift}.png`;
-    downloadLink.href = imageUri;
-    document.body.appendChild(downloadLink); 
-    downloadLink.click(); 
-    document.body.removeChild(downloadLink);
+    const fileName = `Permit_Report_${meta.date.replace(/\//g, "-")}_Shift_${meta.shift}.png`;
+
+    // Check if the current device is an iPhone or iPad running Mobile Chrome/Safari
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if (isIOS) {
+      // --- iOS CHROME WORKAROUND ---
+      // Open the massive Base64 data string in a clean viewport tab for manual long-press save
+      const newWindow = window.open();
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <head>
+              <title>Permit Report Preview</title>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; }
+                img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+                .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 14px; }
+              </style>
+            </head>
+            <body>
+              <div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div>
+              <img src="${imageUri}" alt="Report Image" />
+            </body>
+          </html>
+        `);
+        newWindow.document.close();
+      } else {
+        alert("Pop-up blocked! Please allow pop-ups for this site to view/save the generated image.");
+      }
+    } else {
+      // --- STANDARD DESKTOP / ANDROID DOWNLOAD ---
+      const downloadLink = document.createElement("a");
+      downloadLink.download = fileName;
+      downloadLink.href = imageUri;
+      document.body.appendChild(downloadLink); 
+      downloadLink.click(); 
+      document.body.removeChild(downloadLink);
+    }
 
   } catch (error) { 
     console.error(error);
