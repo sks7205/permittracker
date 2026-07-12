@@ -1,1344 +1,3160 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
 <title>Permit Tracker</title>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
 <style>
+
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; }
 
+
+
   .header { background: #1e3a5f; color: white; padding: 48px 16px 12px; position: sticky; top: 0; z-index: 100; }
+
   .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+
   .header-label { font-size: 10px; letter-spacing: 2px; color: #93c5fd; font-weight: 700; text-transform: uppercase; }
+
   .header-title { font-size: 18px; font-weight: 800; margin-top: 2px; }
+
   .header-sub { font-size: 12px; color: #93c5fd; margin-top: 2px; }
+
   .header-actions { display: flex; gap: 8px; }
+
   .icon-btn { background: rgba(255,255,255,0.12); border: none; color: white; width: 38px; height: 38px; border-radius: 10px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
   .tabs { display: flex; gap: 6px; }
+
   .tab { flex: 1; padding: 8px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: #93c5fd; }
+
   .tab.active { background: white; color: #1e3a5f; }
+
   .sync-bar { background: #e2e8f0; text-align: center; font-size: 11px; color: #64748b; padding: 4px; border-bottom: 1px solid #cbd5e1; }
+
   .setup-banner { background: #fef3c7; border-bottom: 1px solid #fde68a; padding: 10px 16px; font-size: 13px; color: #92400e; display: flex; align-items: center; gap: 8px; cursor: pointer; }
 
+
+
   .section-filter { display: flex; gap: 6px; padding: 10px 14px; overflow-x: auto; background: white; border-bottom: 1px solid #e2e8f0; scrollbar-width: none; }
+
   .section-filter::-webkit-scrollbar { display: none; }
+
   .pill { flex-shrink: 0; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; border: 1.5px solid; cursor: pointer; white-space: nowrap; }
+
   .pill-all    { background: #1e3a5f; color: white;   border-color: #1e3a5f; }
+
   .pill-all-off{ background: white;   color: #64748b; border-color: #e2e8f0; }
+
   .pill-mech   { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+
   .pill-mech-off{ background: white;  color: #64748b; border-color: #e2e8f0; }
+
   .pill-elec   { background: #fef9c3; color: #ca8a04; border-color: #fde68a; }
+
   .pill-elec-off{ background: white;  color: #64748b; border-color: #e2e8f0; }
+
   .pill-oper   { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
+
   .pill-oper-off{ background: white;  color: #64748b; border-color: #e2e8f0; }
 
+  /* New Filter Pill Active / Off Styles */
+
+  .pill-returned     { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
+
+  .pill-returned-off { background: white;   color: #64748b; border-color: #e2e8f0; }
+
+  
+
+  .pill-extended     { background: #fff7ed; color: #ea580c; border-color: #fed7aa; }
+
+  .pill-extended-off { background: white;   color: #64748b; border-color: #e2e8f0; }
+
+  
+
+  .pill-neither      { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+
+  .pill-neither-off  { background: white;   color: #64748b; border-color: #e2e8f0; }
+
+  
+
+  .pill-ma           { background: #f3e8ff; color: #7c3aed; border-color: #ddd6fe; }
+
+  .pill-ma-off       { background: white;   color: #64748b; border-color: #e2e8f0; }
+
+  
+
+  .pill-m2           { background: #fff7ed; color: #ea580c; border-color: #fed7aa; }
+
+  .pill-m2-off       { background: white;   color: #64748b; border-color: #e2e8f0; }
+
+  
+
+  .pill-m3           { background: #f0fdfa; color: #0f766e; border-color: #99f6e4; }
+
+  .pill-m3-off       { background: white;   color: #64748b; border-color: #e2e8f0; }
+
+  
+
+  .pill-m4           { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+
+  .pill-m4-off       { background: white;   color: #64748b; border-color: #e2e8f0; }
+
+  /* Duplicates Filter Pill Styles */
+
+  .pill-duplicate     { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+
+  .pill-duplicate-off { background: white;   color: #64748b; border-color: #e2e8f0; }
+
+  
+
+  /* Keep the warning badge style for inside the cards as well */
+
+  .badge-duplicate { background: #fef2f2; color: #991b1b; border-color: #fca5a5; font-weight: 800; }
+
+
+
   .list { padding: 12px 14px 100px; }
+
   .empty { text-align: center; padding: 60px 20px; color: #94a3b8; }
+
   .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
   .empty h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #64748b; }
 
+
+
   .card { background: white; border-radius: 14px; border: 1px solid #e2e8f0; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; }
+
   .card:active { background: #f8fafc; }
+
   .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; gap: 6px; }
+
   .card-order { font-size: 17px; font-weight: 800; color: #0f172a; font-family: monospace; }
+
   .card-desc { font-size: 13px; color: #475569; margin-bottom: 8px; line-height: 1.4; }
+
   .card-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: #64748b; }
 
+
+
   .badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; border: 1px solid; white-space: nowrap; }
+
   .badge-green  { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
+
   .badge-yellow { background: #fef9c3; color: #ca8a04; border-color: #fde68a; }
+
   .badge-blue   { background: #dbeafe; color: #2563eb; border-color: #bfdbfe; }
+
   .badge-gray   { background: #f1f5f9; color: #64748b; border-color: #e2e8f0; }
+
   .badge-purple { background: #f3e8ff; color: #7c3aed; border-color: #ddd6fe; }
+
   .badge-orange { background: #fff7ed; color: #ea580c; border-color: #fed7aa; }
+
   .badge-teal   { background: #f0fdfa; color: #0f766e; border-color: #99f6e4; }
+
   .badge-red    { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
 
+
+
   .fab { position: fixed; bottom: 24px; right: 20px; width: 58px; height: 58px; border-radius: 50%; background: #1e3a5f; color: white; font-size: 32px; border: none; cursor: pointer; box-shadow: 0 4px 16px rgba(30,58,95,0.4); display: flex; align-items: center; justify-content: center; z-index: 50; }
+
   .fab:active { transform: scale(0.93); }
 
+
+
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: flex-end; }
+
   .modal { background: white; width: 100%; border-radius: 20px 20px 0 0; max-height: 92vh; overflow-y: auto; }
+
   .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 16px 12px; border-bottom: 1px solid #f1f5f9; position: sticky; top: 0; background: white; z-index: 10; }
+
   .modal-title { font-size: 17px; font-weight: 800; }
+
   .close-btn { background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; }
+
   .modal-body { padding: 16px; }
 
+
+
   .field { margin-bottom: 18px; position: relative; }
+
   .field label { display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+
   .field input, .field textarea, .field select { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px; font-size: 16px; color: #0f172a; background: #f8fafc; outline: none; font-family: inherit; }
+
   .field input:focus, .field textarea:focus, .field select:focus { border-color: #3b82f6; background: white; }
+
   .field textarea { resize: none; }
 
+
+
   /* AUTOCOMPLETE - key: no blur handler, use touchend+click on items */
+
   .ac-wrap { position: relative; }
+
   .ac-list { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #3b82f6; border-top: none; border-radius: 0 0 12px 12px; z-index: 9999; max-height: 220px; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+
   .ac-item { padding: 14px 12px; font-size: 15px; color: #1e293b; border-bottom: 1px solid #f1f5f9; }
+
   .ac-item:last-child { border-bottom: none; }
+
   .ac-item b { color: #2563eb; }
+
   .ac-item:active { background: #eff6ff; }
 
+
+
   .order-type-preview { margin-top: 6px; font-size: 12px; color: #64748b; min-height: 20px; }
+
   .section-select-row { display: flex; gap: 8px; margin-bottom: 18px; }
+
   .section-btn { flex: 1; padding: 10px 4px; border-radius: 10px; border: 2px solid #e2e8f0; background: #f8fafc; font-size: 12px; font-weight: 700; cursor: pointer; text-align: center; color: #64748b; }
+
   .section-btn.active-mech { background: #dbeafe; color: #1d4ed8; border-color: #3b82f6; }
+
   .section-btn.active-elec { background: #fef9c3; color: #ca8a04; border-color: #eab308; }
+
   .section-btn.active-oper { background: #dcfce7; color: #16a34a; border-color: #22c55e; }
 
+
+
   .time-row { display: flex; gap: 8px; }
+
   .time-row input { flex: 1; }
+
   .now-btn { background: #f1f5f9; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 0 14px; font-size: 13px; font-weight: 700; color: #475569; cursor: pointer; white-space: nowrap; }
 
+
+
   .toggle-row { display: flex; align-items: center; gap: 12px; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 12px; margin-bottom: 18px; }
+
   .toggle-row input[type=checkbox] { width: 22px; height: 22px; accent-color: #2563eb; cursor: pointer; }
+
   .toggle-row label { font-size: 14px; font-weight: 600; color: #1d4ed8; cursor: pointer; }
 
+
+
   /* Extended / Returned section in form */
+
   .ext-ret-row { display: flex; gap: 8px; margin-bottom: 18px; }
+
   .ext-ret-btn { flex: 1; padding: 10px 6px; border-radius: 10px; border: 2px solid #e2e8f0; background: #f8fafc; font-size: 12px; font-weight: 700; cursor: pointer; text-align: center; color: #64748b; }
+
   .ext-ret-btn.active-ext { background: #fff7ed; color: #ea580c; border-color: #fb923c; }
+
   .ext-ret-btn.active-ret { background: #dcfce7; color: #16a34a; border-color: #22c55e; }
 
+
+
   .btn-row { display: flex; gap: 10px; margin-top: 6px; }
+
   .btn-primary { flex: 1; background: #1e3a5f; color: white; border: none; border-radius: 12px; padding: 15px; font-size: 16px; font-weight: 700; cursor: pointer; }
+
   .btn-primary:disabled { opacity: 0.5; }
+
   .btn-secondary { background: #f1f5f9; border: 1.5px solid #e2e8f0; color: #1e3a5f; border-radius: 12px; padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; width:100%; }
+
   .btn-danger { background: #fff1f2; border: 1.5px solid #fecdd3; color: #e11d48; border-radius: 12px; padding: 15px 18px; font-size: 14px; font-weight: 700; cursor: pointer; }
 
+
+
   .report { padding: 12px 14px 40px; }
+
   .report-header { background: #1e293b; color: white; border-radius: 12px 12px 0 0; padding: 14px; }
+
   .report-header h2 { font-size: 15px; font-weight: 800; letter-spacing: 1px; }
+
   .report-header p { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+
   .report-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+
   .report-actions button { flex: 1; padding: 11px; border-radius: 10px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; }
+
   .btn-excel { background: #16a34a; color: white; }
+
   .btn-share { background: #2563eb; color: white; }
+
   .report-table-wrap { overflow-x: auto; background: white; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0; border-top: none; }
+
   table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 880px; }
+
   th { background: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 10px; padding: 8px 6px; border: 1px solid #e2e8f0; white-space: nowrap; }
+
   td { padding: 8px 6px; border: 1px solid #e2e8f0; vertical-align: top; }
+
   tr:nth-child(even) td { background: #f8fafc; }
+
   .report-hint { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 10px; }
 
+
+
   .loading { text-align: center; padding: 80px 20px; color: #64748b; }
+
   .spinner { font-size: 36px; animation: spin 1s linear infinite; display: inline-block; }
+
   @keyframes spin { to { transform: rotate(360deg); } }
+
   .config-screen { padding: 20px 16px; }
+
   .config-screen h2 { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+
   /* Scan permit */
+
   .scan-choice { display: flex; gap: 10px; margin-bottom: 18px; }
+
   .scan-choice button { flex:1; padding:16px 8px; border-radius:14px; border:2px solid #e2e8f0; background:#f8fafc; font-size:13px; font-weight:700; cursor:pointer; color:#1e293b; display:flex; flex-direction:column; align-items:center; gap:6px; }
+
   .scan-choice button span { font-size:28px; }
+
   .scan-choice button:active { background:#eff6ff; border-color:#3b82f6; }
+
   .scan-status { background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:10px; padding:12px; font-size:13px; color:#1d4ed8; margin-bottom:16px; text-align:center; display:none; }
+
   .scan-preview { width:100%; border-radius:10px; margin-bottom:12px; display:none; max-height:200px; object-fit:cover; }
+
   #scan-file { display:none; }
 
+
+
   .config-screen p { font-size: 13px; color: #64748b; margin-bottom: 20px; line-height: 1.6; }
+
   .hint-box { background: #fef9c3; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; font-size: 12px; color: #92400e; margin-bottom: 16px; line-height: 1.6; }
+
 </style>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js"></script>
+
 </head>
+
 <body>
+
 <div id="app">
+
   <div class="loading"><div class="spinner">⚙️</div><p style="margin-top:16px">Loading...</p></div>
+
 </div>
 
+
+
 <script>
+
 // ══════════════════════════════════════
+
 //  STATE
+
 // ══════════════════════════════════════
+
 let API_URL = localStorage.getItem("ars2_api_url") || "";
+
 let permits = [];
+
 // meta is stored per-phone in localStorage — never overwritten by sheet
+
 function loadMeta() {
+
   try {
+
     const saved = localStorage.getItem("ars2_meta");
+
     if (saved) return JSON.parse(saved);
+
   } catch(e) {}
+
   return { date: todayStr(), shift: "", issuer: "" };
+
 }
+
 let meta = loadMeta();
+
 let currentView = "list";
+
 let sectionFilter = "ALL";
+
 let editingPermit = null;
+
 let syncing = false;
+
 let lastSync = null;
+
 let refreshTimer = null;
 
+
+
 // ══════════════════════════════════════
+
 //  HELPERS
+
 // ══════════════════════════════════════
+
 function extendUnaccountedPermit(id) {
+
   const oldPermit = permits.find(p => String(p.id) === String(id));
+
   if (!oldPermit) return;
+
   
+
   // Pre-fill the form with the old data, but force the status to 'extended'
+
   // and clear out the old isolation/issue times so you can stamp them fresh if needed
+
   const prefill = {
+
     ...oldPermit,
+
     status: "extended",
+
     isolationTime: "",
+
     issueTime: "",
+
     extendedTime: nowTime()
+
   };
+
   
+
   // Open as a NEW permit (not an edit) so it saves to the current shift's log
+
   showPermitForm(prefill);
+
 }
+
 function getPreviousShift(currentDateStr, currentShift) {
+
   const parts = currentDateStr.split("/");
+
   if (parts.length !== 3) return null;
+
   
+
   // Create a proper Date object (Month is 0-indexed in JS)
+
   let d = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
+
   let prevShift = "";
 
+
+
   if (currentShift === "B") { 
+
     prevShift = "A"; 
+
   } else if (currentShift === "C") { 
+
     prevShift = "B"; 
+
   } else if (currentShift === "A") { 
+
     prevShift = "C";
+
     d.setDate(d.getDate() - 1); // Subtract one day for the A -> C handover
+
   } else {
+
     // If it's "G" (General) or an unknown shift, we can't reliably predict the handover
+
     return null; 
+
   }
+
+
 
   const dd = String(d.getDate()).padStart(2, "0");
+
   const mm = String(d.getMonth() + 1).padStart(2, "0");
+
   const yyyy = d.getFullYear();
 
+
+
   return { date: `${dd}/${mm}/${yyyy}`, shift: prevShift };
+
 }
+
 function unaccountedPermits() {
+
   const prev = getPreviousShift(meta.date, meta.shift);
+
   if (!prev) return []; 
 
+
+
   // Get all permits already logged in the PRESENT shift
+
   const currentShiftPermits = activePermits();
 
+
+
   return permits.filter(p => {
+
     const d = String(p.shiftDate || "").trim();
+
     const s = String(p.shift || "").trim();
+
     
+
     // 1. Only look at permits from the exact previous shift
+
     if (d !== prev.date || s !== prev.shift) return false; 
+
     
+
     // 2. If it was properly returned by the outgoing shift, it is accounted for
+
     if (p.status === "returned") return false;
+
     
+
     // 3. CROSS-CHECK: Has the PRESENT shift logged this exact orderNo as "extended"?
+
     const isExtendedInCurrent = currentShiftPermits.some(currP => 
+
       currP.orderNo === p.orderNo
+
     );
+
     
+
     // If the present shift hasn't extended it, it remains unaccounted.
+
     return !isExtendedInCurrent;
+
   });
+
 }
+
 function classifyOrder(orderNo) {
+
   const s = String(orderNo||"").trim().replace(/\D/g,"");
+
   if (!s) return "";
+
   const len = s.length, first = s[0];
+
   if (len===8 && first==="1") return "MA";
+
   if (len===9 && first==="1") return "M1";
+
   if (len===9 && first==="2") return "M2";
+
   if (len===9 && first==="3") return "M3";
+
   if (len===9 && first==="4") return "M4";
+
   return "—";
+
 }
+
 function orderTypeBadgeCls(t) {
+
   return {MA:"badge-purple",M1:"badge-blue",M2:"badge-orange",M3:"badge-teal",M4:"badge-red"}[t]||"badge-gray";
+
 }
+
 function sectionBadgeCls(s) {
+
   if (s==="Mechanical") return "badge-blue";
+
   if (s==="Electrical") return "badge-yellow";
+
   if (s==="Operation")  return "badge-green";
+
   return "badge-gray";
+
 }
+
 function todayStr() {
+
   const d=new Date(); return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+
 }
+
 function pad(n) { return String(n).padStart(2,"0"); }
+
 function nowTime() { return new Date().toTimeString().slice(0,5); }
+
 function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
+
+
 // ══════════════════════════════════════
+
 //  API
+
 // ══════════════════════════════════════
+
 async function api(action, body={}) {
+
   if (!API_URL) throw new Error("No API URL");
+
   const res = await fetch(API_URL, {
+
     method:"POST", body:JSON.stringify({action,...body}), headers:{"Content-Type":"text/plain"}
+
   });
+
   const data = await res.json();
+
   if (data.error) throw new Error(data.error);
+
   return data;
+
 }
+
+
 
 async function loadAll() {
+
   // Only load permits from server — meta is per-phone (localStorage)
+
   const p = await api("getAll");
+
   permits = (p.permits||[]).map(x=>({...x, id:String(x.id)}));
+
   lastSync = new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+
 }
 
+
+
 // ══════════════════════════════════════
+
 //  RENDER
+
 // ══════════════════════════════════════
+
 function activePermits() {
+
   return permits.filter(p => {
+
     const d = String(p.shiftDate || "").trim();
+
     const s = String(p.shift     || "").trim();
+
     // Old records without shiftDate: always show so data is never hidden
+
     if (!d || !s) return true;
+
     
+
     // If shift selection is cleared/blank, show all entries matching just the date
+
     if (!meta.shift) {
+
       return d === meta.date;
+
     }
+
     
+
     return d === meta.date && s === meta.shift;
+
   });
+
 }
+
 function render() {
+
   const app = document.getElementById("app");
+
   if (!API_URL) { app.innerHTML = renderConfig(); return; }
+
   app.innerHTML = `
+
     ${renderHeader()}
+
     ${renderSyncBar()}
+
     ${!meta.issuer?`<div class="setup-banner" onclick="openSetup()">⚠️ Tap to set your name and shift details</div>`:""}
+
     <div id="main-content">
+
       ${currentView==="list" ? renderList() : 
+
         currentView==="report" ? renderReport() : 
+
         renderUnaccounted()}
+
     </div>
+
     ${currentView==="list"?`<button class="fab" onclick="openAdd()">+</button>`:""}
+
   `;
+
 }
+
+
 
 function renderHeader() {
+
   const unaccountedCount = unaccountedPermits().length;
+
   const alertIcon = unaccountedCount > 0 ? "🔴 " : "✅ ";
 
+
+
   return `<div class="header">
+
     <div class="header-top">
+
       <div>
+
         <div class="header-label">Permit Tracker</div>
+
         <div class="header-title">${esc(meta.date)} · Shift ${esc(meta.shift)}</div>
+
         ${meta.issuer?`<div class="header-sub">${esc(meta.issuer)}</div>`:""}
+
       </div>
+
       <div class="header-actions">
+
         <button class="icon-btn" onclick="doRefresh()">${syncing?"⏳":"🔄"}</button>
+
         <button class="icon-btn" onclick="openSetup()">⚙️</button>
+
       </div>
+
     </div>
+
     <div class="tabs">
+
       <button class="tab ${currentView==="list"?"active":""}" onclick="switchView('list')">Permits (${activePermits().length})</button>
+
       <button class="tab ${currentView==="report"?"active":""}" onclick="switchView('report')">📋 Report</button>
+
       <button class="tab ${currentView==="unaccounted"?"active":""}" onclick="switchView('unaccounted')">${alertIcon} Audit (${unaccountedCount})</button>
+
     </div>
+
   </div>`;
+
 }
+
+
 
 function renderSyncBar() {
+
   return `<div class="sync-bar">${lastSync?`Last synced ${lastSync} · Auto-refresh 20s`:"Connecting..."}</div>`;
+
 }
+
+
 
 function renderSectionFilter() {
-  const defs = [
-    {key:"ALL",       cls:["pill-all","pill-all-off"],   label:"All"},
-    {key:"Mechanical",cls:["pill-mech","pill-mech-off"], label:"⚙️ Mechanical"},
-    {key:"Electrical",cls:["pill-elec","pill-elec-off"], label:"⚡ Electrical"},
-    {key:"Operation", cls:["pill-oper","pill-oper-off"], label:"🏗️ Operation"},
-  ];
-  return `<div class="section-filter">${defs.map(d=>{
-    const ap = activePermits(); const count = d.key==="ALL"?ap.length:ap.filter(p=>p.section===d.key).length;
-    const on = sectionFilter===d.key;
-    return `<button class="pill ${on?d.cls[0]:d.cls[1]}" onclick="setFilter('${d.key}')">${d.label} (${count})</button>`;
-  }).join("")}</div>`;
-}
 
-function renderList() {
   const ap = activePermits();
-  const filtered = sectionFilter==="ALL"?ap:ap.filter(p=>p.section===sectionFilter);
-  if (ap.length===0) return `${renderSectionFilter()}<div class="list"><div class="empty"><div class="empty-icon">📋</div><h3>No permits for this date/shift</h3><p>Tap + to add first permit</p></div></div>`;
 
-  const cards = filtered.map(p=>{
-    const hasIso   = !!p.isolationTime;
-    const hasIssue = !!p.issueTime;
-    const returned = p.status==="returned";
-    const extended = p.status==="extended";
-    const status   = returned?"Returned":extended?"Extended":hasIssue?"Issued":hasIso?"Isolated":"Pending";
-    const stCls    = returned?"badge-green":extended?"badge-orange":hasIssue?"badge-blue":hasIso?"badge-yellow":"badge-gray";
-    const oType    = classifyOrder(p.orderNo);
-    const idx      = ap.indexOf(p)+1;
-    return `<div class="card" onclick="openEdit('${esc(p.id)}')">
-      <div class="card-top">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span style="font-size:11px;color:#94a3b8;font-weight:700">#${idx}</span>
-          <span class="card-order">${esc(p.orderNo)}</span>
-          ${oType&&oType!=="—"?`<span class="badge ${orderTypeBadgeCls(oType)}">${oType}</span>`:""}
-          ${p.isOnline?`<span class="badge badge-blue">Online</span>`:""}
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-          <span class="badge ${stCls}">${status}</span>
-          ${p.section?`<span class="badge ${sectionBadgeCls(p.section)}" style="font-size:10px">${esc(p.section)}</span>`:""}
-        </div>
-      </div>
-      <div class="card-desc">${esc(p.jobDescription)}</div>
-      <div class="card-meta">
-        <span>👤 ${esc(p.receiver)}</span>
-        ${p.contactNo?`<span>📞 ${esc(p.contactNo)}</span>`:""}
-        ${p.isolationTime?`<span>🔒 ${esc(p.isolationTime)}</span>`:""}
-        ${p.issueTime?`<span>✅ ${esc(p.issueTime)}</span>`:""}
-        ${p.extendedTime?`<span>⏰ Ext: ${esc(p.extendedTime)}</span>`:""}
-        ${p.returnedTime?`<span>🔁 Ret: ${esc(p.returnedTime)}</span>`:""}
-        ${p.issuer?`<span style="color:#94a3b8">${esc(p.issuer)}</span>`:""}
-      </div>
-    </div>`;
-  }).join("");
 
-  const emptyMsg = filtered.length===0?`<div class="empty"><div class="empty-icon">🔍</div><h3>No ${sectionFilter} permits</h3></div>`:"";
-  return `${renderSectionFilter()}<div class="list">${cards}${emptyMsg}</div>`;
-}
 
-function renderReport() {
-  const ap = activePermits();
-  const rows = ap.map((p,i)=>{
-    const oType = classifyOrder(p.orderNo);
-    return `<tr>
-      <td>${i+1}</td>
-      <td style="font-family:monospace;font-weight:700">${esc(p.orderNo)}</td>
-      <td style="font-weight:700">${esc(oType)}</td>
-      <td style="font-weight:700; text-align:center;">${esc(p.shift||"—")}</td>
-      <td>${esc(p.section||"")}</td>
-      <td>${esc(p.jobDescription)}</td>
-      <td>${esc(p.receiver)}</td>
-      <td>${esc(p.contactNo||"")}</td>
-      <td>${esc(p.isolationTime||"—")}</td>
-      <td>${esc(p.issueTime||"—")}</td>
-      <td>${esc(p.extendedTime||"—")}</td>
-      <td>${esc(p.returnedTime||"—")}</td>
-      <td>${(p.isOnline==="TRUE"||p.isOnline===true)?"Online":"Isolated"}</td>
-      <td>${esc(p.issuer||"")}</td>
-    </tr>`;
-  }).join("");
+  // Pre-calculate occurrences to show an accurate real-time count on the filter pill
 
-  return `<div class="report">
-    <div class="report-header">
-      <h2>PERMIT TRACKER</h2>
-      <p>Date: ${esc(meta.date)} &nbsp;·&nbsp; Shift: ${esc(meta.shift)}</p>
-    </div>
-    <div class="report-actions">
-      <button class="btn-excel" onclick="exportExcel()">📥 Export Excel</button>
-      <button class="btn-share" onclick="shareReport()">📤 Share</button>
-      <button id="capture-btn" onclick="captureReportImage()" style="background:#10b981; color:white;">📸 Save Image</button>
-    </div>
-    <div class="report-table-wrap">
-      <table id="report-table">
-        <thead><tr>
-          <th>#</th><th>Order No</th><th>Type</th><th>Shift</th><th>Section</th>
-          <th>Job Description</th><th>Receiver</th><th>Contact</th>
-          <th>Isolation</th><th>Issue</th><th>Extended</th><th>Returned</th>
-          <th>Permit</th><th>By</th>
-        </tr></thead>
-        <tbody>${rows||`<tr><td colspan="13" style="text-align:center;color:#94a3b8;padding:20px">No permits</td></tr>`}</tbody>
-      </table>
-    </div>
-    <p class="report-hint">📸 Screenshot · or use Export / Share above</p>
-  </div>`;
-}
+  const orderCounts = {};
 
-function renderConfig() {
-  return `
-    <div style="background:#1e3a5f;padding:48px 16px 20px;color:white">
-      <div style="font-size:10px;letter-spacing:2px;color:#93c5fd;font-weight:700;text-transform:uppercase">ARS-2</div>
-      <div style="font-size:22px;font-weight:800;margin-top:4px">Permit Tracker</div>
-    </div>
-    <div class="config-screen">
-      <h2>First Time Setup</h2>
-      <p>Paste your Google Apps Script URL below. Only needed once per phone.</p>
-      <div class="hint-box">📌 Apps Script → Deploy → Manage Deployments → copy Web App URL</div>
-      <div class="field">
-        <label>Apps Script Web App URL</label>
-        <textarea id="url-input" style="font-size:13px;height:80px" placeholder="https://script.google.com/macros/s/.../exec"></textarea>
-      </div>
-      <button class="btn-primary" onclick="saveUrl()">Save & Connect</button>
-    </div>`;
-}
-function renderUnaccounted() {
-  const prev = getPreviousShift(meta.date, meta.shift);
-  if (!prev) return `<div class="empty"><h3>Cannot calculate previous shift.</h3></div>`;
+  ap.forEach(p => {
 
-  // Calculate the Tally metrics
-  const prevPermits = permits.filter(p => p.shiftDate === prev.date && p.shift === prev.shift);
-  const currentShiftPermits = activePermits();
-  
-  let tallyReturned = 0;
-  let tallyExtended = 0;
-  let unaccountedList = [];
+    const num = String(p.orderNo || "").trim();
 
-  prevPermits.forEach(p => {
-    if (p.status === "returned") {
-      tallyReturned++;
-    } else {
-      const isExtended = currentShiftPermits.some(currP => currP.orderNo === p.orderNo);
-      if (isExtended) {
-        tallyExtended++;
-      } else {
-        unaccountedList.push(p);
-      }
-    }
+    if (num) orderCounts[num] = (orderCounts[num] || 0) + 1;
+
   });
 
-  // Build the rows using the exact unaccounted list
-  const rows = unaccountedList.map((p, i) => {
-    return `<tr onclick="extendUnaccountedPermit('${esc(p.id)}')" style="cursor:pointer; background: #fff1f2;">
-      <td>${i + 1}</td>
-      <td style="font-family:monospace;font-weight:700">${esc(p.orderNo)}</td>
-      <td >${esc(p.jobDescription)}</td>
-      <td>${esc(p.section || "")}</td>
-      <td>${esc(p.receiver)} <br> <a href="tel:${esc(p.contactNo)}" style="color:#2563eb;text-decoration:none">${esc(p.contactNo || "")}</a></td>
-      <td>${esc(p.issueTime || "—")}</td>
-      <td><span class="badge badge-red">Missing</span></td>
-    </tr>`;
+
+
+  const defs = [
+
+    {key:"ALL",        cls:["pill-all","pill-all-off"],   label:"All", match: p => true},
+
+    {key:"Mechanical", cls:["pill-mech","pill-mech-off"], label:"⚙️ Mechanical", match: p => p.section==="Mechanical"},
+
+    {key:"Electrical", cls:["pill-elec","pill-elec-off"], label:"⚡ Electrical", match: p => p.section==="Electrical"},
+
+    {key:"Operation",  cls:["pill-oper","pill-oper-off"], label:"🏗️ Operation", match: p => p.section==="Operation"},
+
+    {key:"returned",   cls:["pill-returned","pill-returned-off"], label:"🔁 Returned", match: p => p.status==="returned"},
+
+    {key:"extended",   cls:["pill-extended","pill-extended-off"], label:"⏰ Extended", match: p => p.status==="extended"},
+
+    {key:"neither",    cls:["pill-neither","pill-neither-off"], label:"❓ Neither", match: p => p.status!=="returned" && p.status!=="extended"},
+
+    {key:"MA",         cls:["pill-ma","pill-ma-off"],        label:"MA", match: p => classifyOrder(p.orderNo)==="MA"},
+
+    {key:"M2",         cls:["pill-m2","pill-m2-off"],        label:"M2", match: p => classifyOrder(p.orderNo)==="M2"},
+
+    {key:"M3",         cls:["pill-m3","pill-m3-off"],        label:"M3", match: p => classifyOrder(p.orderNo)==="M3"},
+
+    {key:"M4",         cls:["pill-m4","pill-m4-off"],        label:"M4", match: p => classifyOrder(p.orderNo)==="M4"},
+
+    {key:"duplicates", cls:["pill-duplicate","pill-duplicate-off"], label:"⚠️ Duplicates", match: p => String(p.orderNo || "").trim() && orderCounts[String(p.orderNo || "").trim()] > 1}
+
+  ];
+
+
+
+  return `<div class="section-filter">${defs.map(d=>{
+
+    const count = ap.filter(d.match).length;
+
+    const on = sectionFilter===d.key;
+
+    return `<button class="pill ${on?d.cls[0]:d.cls[1]}" onclick="setFilter('${d.key}')">${d.label} (${count})</button>`;
+
+  }).join("")}</div>`;
+
+}
+
+
+
+function renderList() {
+
+  const ap = activePermits();
+
+  
+
+  // 1. Count occurrences of each Order No in the current shift
+
+  const orderCounts = {};
+
+  ap.forEach(p => {
+
+    const num = String(p.orderNo || "").trim();
+
+    if (num) {
+
+      orderCounts[num] = (orderCounts[num] || 0) + 1;
+
+    }
+
+  });
+
+  
+
+  // Set accurate filtering conditions matching the selected filter option
+
+  const matchRules = {
+
+    "ALL": p => true,
+
+    "Mechanical": p => p.section==="Mechanical",
+
+    "Electrical": p => p.section==="Electrical",
+
+    "Operation": p => p.section==="Operation",
+
+    "returned": p => p.status==="returned",
+
+    "extended": p => p.status==="extended",
+
+    "neither": p => p.status!=="returned" && p.status!=="extended",
+
+    "MA": p => classifyOrder(p.orderNo)==="MA",
+
+    "M2": p => classifyOrder(p.orderNo)==="M2",
+
+    "M3": p => classifyOrder(p.orderNo)==="M3",
+
+    "M4": p => classifyOrder(p.orderNo)==="M4",
+
+    "duplicates": p => String(p.orderNo || "").trim() && orderCounts[String(p.orderNo || "").trim()] > 1
+
+  };
+
+  
+
+  const filtered = matchRules[sectionFilter] ? ap.filter(matchRules[sectionFilter]) : ap.filter(p=>p.section===sectionFilter);
+
+  
+
+  if (ap.length===0) return `${renderSectionFilter()}<div class="list"><div class="empty"><div class="empty-icon">📋</div><h3>No permits for this date/shift</h3><p>Tap + to add first permit</p></div></div>`;
+
+  
+
+  const cards = filtered.map(p=>{
+
+    const hasIso   = !!p.isolationTime;
+
+    const hasIssue = !!p.issueTime;
+
+    const returned = p.status==="returned";
+
+    const extended = p.status==="extended";
+
+    const status   = returned?"Returned":extended?"Extended":hasIssue?"Issued":hasIso?"Isolated":"Pending";
+
+    const stCls    = returned?"badge-green":extended?"badge-orange":hasIssue?"badge-blue":hasIso?"badge-yellow":"badge-gray";
+
+    const oType    = classifyOrder(p.orderNo);
+
+    const idx      = ap.indexOf(p)+1;
+
+    
+
+    // Determine if this specific entry is a duplicate
+
+    const currentNo = String(p.orderNo || "").trim();
+
+    const isDuplicate = orderCounts[currentNo] > 1;
+
+
+
+    return `<div class="card" onclick="openEdit('${esc(p.id)}')">
+
+      <div class="card-top">
+
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+
+          <span style="font-size:11px;color:#94a3b8;font-weight:700">#${idx}</span>
+
+          <span class="card-order">${esc(p.orderNo)}</span>
+
+          ${oType&&oType!=="—"?`<span class="badge ${orderTypeBadgeCls(oType)}">${oType}</span>`:""}
+
+          ${p.isOnline?`<span class="badge badge-blue">Online</span>`:""}
+
+          
+
+          ${isDuplicate ? `<span class="badge badge-duplicate">⚠️ Duplicate (${orderCounts[currentNo]}x)</span>` : ""}
+
+        </div>
+
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+
+          <span class="badge ${stCls}">${status}</span>
+
+          ${p.section?`<span class="badge ${sectionBadgeCls(p.section)}" style="font-size:10px">${esc(p.section)}</span>`:""}
+
+        </div>
+
+      </div>
+
+      <div class="card-desc">${esc(p.jobDescription)}</div>
+
+      <div class="card-meta">
+
+        <span>👤 ${esc(p.receiver)}</span>
+
+        ${p.contactNo?`<span>📞 ${esc(p.contactNo)}</span>`:""}
+
+        ${p.isolationTime?`<span>🔒 ${esc(p.isolationTime)}</span>`:""}
+
+        ${p.issueTime?`<span>✅ ${esc(p.issueTime)}</span>`:""}
+
+        ${p.extendedTime?`<span>⏰ Ext: ${esc(p.extendedTime)}</span>`:""}
+
+        ${p.returnedTime?`<span>🔁 Ret: ${esc(p.returnedTime)}</span>`:""}
+
+        ${p.issuer?`<span style="color:#94a3b8">${esc(p.issuer)}</span>`:""}
+
+      </div>
+
+    </div>`;
+
   }).join("");
 
+
+
+  const emptyMsg = filtered.length===0?`<div class="empty"><div class="empty-icon">🔍</div><h3>No ${sectionFilter} permits</h3></div>`:"";
+
+  return `${renderSectionFilter()}<div class="list">${cards}${emptyMsg}</div>`;
+
+}
+
+
+
+function renderReport() {
+
+  const ap = activePermits();
+
+
+
+  // 1. Pre-calculate occurrences of each Order No in the current shift
+
+  const orderCounts = {};
+
+  ap.forEach(p => {
+
+    const num = String(p.orderNo || "").trim();
+
+    if (num) {
+
+      orderCounts[num] = (orderCounts[num] || 0) + 1;
+
+    }
+
+  });
+
+
+
+  // Define priorities for Section and Order Type sorting rules
+
+  const sectionPriority = { "Mechanical": 1, "Electrical": 2, "Operation": 3 };
+
+  const orderTypePriority = { "MA": 1, "M3": 2, "M4": 3, "M2": 4, "M1": 5 };
+
+
+
+  // 2. Define the matching rules identical to renderList()
+
+  const matchRules = {
+
+    "ALL": p => true,
+
+    "Mechanical": p => p.section==="Mechanical",
+
+    "Electrical": p => p.section==="Electrical",
+
+    "Operation": p => p.section==="Operation",
+
+    "returned": p => p.status==="returned",
+
+    "extended": p => p.status==="extended",
+
+    "neither": p => p.status!=="returned" && p.status!=="extended",
+
+    "MA": p => classifyOrder(p.orderNo)==="MA",
+
+    "M2": p => classifyOrder(p.orderNo)==="M2",
+
+    "M3": p => classifyOrder(p.orderNo)==="M3",
+
+    "M4": p => classifyOrder(p.orderNo)==="M4",
+
+    "duplicates": p => String(p.orderNo || "").trim() && orderCounts[String(p.orderNo || "").trim()] > 1
+
+  };
+
+
+
+  // 3. Apply the active filter restriction BEFORE sorting
+
+  const permitsToProcess = matchRules[sectionFilter] ? ap.filter(matchRules[sectionFilter]) : ap.filter(p=>p.section===sectionFilter);
+
+
+
+  // 4. Sort the filtered subset sequence
+
+  const sortedPermits = [...permitsToProcess].sort((a, b) => {
+
+    const secA = a.section || "";
+
+    const secB = b.section || "";
+
+    const pSecA = sectionPriority[secA] || 99;
+
+    const pSecB = sectionPriority[secB] || 99;
+
+    if (pSecA !== pSecB) return pSecA - pSecB;
+
+
+
+    const typeA = classifyOrder(a.orderNo);
+
+    const typeB = classifyOrder(b.orderNo);
+
+    const pTypeA = orderTypePriority[typeA] || 99;
+
+    const pTypeB = orderTypePriority[typeB] || 99;
+
+    if (pTypeA !== pTypeB) return pTypeA - pTypeB;
+
+
+
+    return ap.indexOf(a) - ap.indexOf(b);
+
+  });
+
+
+
+  // Map over filtered/sorted array to build table report rows
+
+  const rows = sortedPermits.map((p, i) => {
+
+    const oType = classifyOrder(p.orderNo);
+
+    const currentNo = String(p.orderNo || "").trim();
+
+    const isDuplicate = orderCounts[currentNo] > 1;
+
+    const rowBgStyle = isDuplicate ? ' style="background-color: #fee2e2;"' : '';
+
+
+
+    return `<tr${rowBgStyle}>
+
+      <td>${i + 1}</td>
+
+      <td style="font-family:monospace;font-weight:700">
+
+        ${esc(p.orderNo)} 
+
+        ${isDuplicate ? `<span style="color:#b91c1c; font-size:10px; display:block; font-weight:bold;">⚠️ Duplicate</span>` : ''}
+
+      </td>
+
+      <td style="font-weight:700">${esc(oType)}</td>
+
+      <td style="font-weight:700; text-align:center;">${esc(p.shift || "—")}</td>
+
+      <td>${esc(p.section || "")}</td>
+
+      <td>${esc(p.jobDescription)}</td>
+
+      <td>${esc(p.receiver)}</td>
+
+      <td>${esc(p.contactNo || "")}</td>
+
+      <td>${esc(p.isolationTime || "—")}</td>
+
+      <td>${esc(p.issueTime || "—")}</td>
+
+      <td>${esc(p.extendedTime || "—")}</td>
+
+      <td>${esc(p.returnedTime || "—")}</td>
+
+      <td>${esc(p.status || "—")}</td>
+
+      <td>${(p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated"}</td>
+
+      <td>${esc(p.issuer || "")}</td>
+
+    </tr>`;
+
+  }).join("");
+
+
+
+  // Visual label badge for current filter context in the report header
+
+  const filterLabel = sectionFilter === "ALL" ? "All Records" : `Filtered: ${sectionFilter}`;
+
+
+
   return `<div class="report">
-    <div class="report-header" style="background: #1e293b; padding-bottom: 20px;">
-      <h2>SHIFT HANDOVER AUDIT</h2>
-      <p>Tracking permits from Shift ${esc(prev.shift)} on ${esc(prev.date)}</p>
-      <div class="report-actions">
-       <button id="capture-audit-btn" onclick="captureAuditImage()" style="background:#10b981; color:white;">📸 Save Image</button>
+
+    <div class="report-header">
+
+      <h2>PERMIT TRACKER</h2>
+
+      <p>Date: ${esc(meta.date)} &nbsp;·&nbsp; Shift: ${esc(meta.shift)}</p>
+
+      <div style="margin-top: 8px;"><span class="badge badge-blue" style="font-size: 11px; padding: 4px 8px;">📊 ${filterLabel} (${sortedPermits.length})</span></div>
+
+    </div>
+
+    <div class="report-actions">
+
+      <button class="btn-excel" onclick="exportExcel()">📥 Export Excel</button>
+
+      <button class="btn-share" onclick="shareReport()">📤 Share</button>
+
+      <button id="capture-btn" onclick="captureReportImage()" style="background:#10b981; color:white;">📸 Save Image</button>
+
+    </div>
+
+    <div class="report-table-wrap">
+
+      <table id="report-table">
+
+        <thead><tr>
+
+          <th>#</th><th>Order No</th><th>Type</th><th>Shift</th><th>Section</th>
+
+          <th>Job Description</th><th>Receiver</th><th>Contact</th>
+
+          <th>Isolation</th><th>Issue</th><th>Extended</th><th>Returned</th><th>Status</th>
+
+          <th>Permit</th><th>By</th>
+
+        </tr></thead>
+
+        <tbody>${rows || `<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:20px">No matching permits for filter "${sectionFilter}"</td></tr>`}</tbody>
+
+      </table>
+
+    </div>
+
+    <p class="report-hint">📸 Screenshot · or use Export / Share above</p>
+
+  </div>`;
+
+}
+
+
+
+function renderConfig() {
+
+  return `
+
+    <div style="background:#1e3a5f;padding:48px 16px 20px;color:white">
+
+      <div style="font-size:10px;letter-spacing:2px;color:#93c5fd;font-weight:700;text-transform:uppercase">ARS-2</div>
+
+      <div style="font-size:22px;font-weight:800;margin-top:4px">Permit Tracker</div>
+
+    </div>
+
+    <div class="config-screen">
+
+      <h2>First Time Setup</h2>
+
+      <p>Paste your Google Apps Script URL below. Only needed once per phone.</p>
+
+      <div class="hint-box">📌 Apps Script → Deploy → Manage Deployments → copy Web App URL</div>
+
+      <div class="field">
+
+        <label>Apps Script Web App URL</label>
+
+        <textarea id="url-input" style="font-size:13px;height:80px" placeholder="https://script.google.com/macros/s/.../exec"></textarea>
+
       </div>
+
+      <button class="btn-primary" onclick="saveUrl()">Save & Connect</button>
+
+    </div>`;
+
+}
+
+function renderUnaccounted() {
+
+  const prev = getPreviousShift(meta.date, meta.shift);
+
+  if (!prev) return `<div class="empty"><h3>Cannot calculate previous shift.</h3></div>`;
+
+
+
+  // Calculate the Tally metrics
+
+  const prevPermits = permits.filter(p => p.shiftDate === prev.date && p.shift === prev.shift);
+
+  const currentShiftPermits = activePermits();
+
+  
+
+  let tallyReturned = 0;
+
+  let tallyExtended = 0;
+
+  let unaccountedList = [];
+
+
+
+  prevPermits.forEach(p => {
+
+    if (p.status === "returned") {
+
+      tallyReturned++;
+
+    } else {
+
+      const isExtended = currentShiftPermits.some(currP => currP.orderNo === p.orderNo);
+
+      if (isExtended) {
+
+        tallyExtended++;
+
+      } else {
+
+        unaccountedList.push(p);
+
+      }
+
+    }
+
+  });
+
+
+
+  // Build the rows using the exact unaccounted list
+
+  const rows = unaccountedList.map((p, i) => {
+
+    return `<tr onclick="extendUnaccountedPermit('${esc(p.id)}')" style="cursor:pointer; background: #fff1f2;">
+
+      <td>${i + 1}</td>
+
+      <td style="font-family:monospace;font-weight:700">${esc(p.orderNo)}</td>
+
+      <td >${esc(p.jobDescription)}</td>
+
+      <td>${esc(p.section || "")}</td>
+
+      <td>${esc(p.receiver)} <br> <a href="tel:${esc(p.contactNo)}" style="color:#2563eb;text-decoration:none">${esc(p.contactNo || "")}</a></td>
+
+      <td>${esc(p.issueTime || "—")}</td>
+
+      <td><span class="badge badge-red">Missing</span></td>
+
+    </tr>`;
+
+  }).join("");
+
+
+
+  return `<div class="report">
+
+    <div class="report-header" style="background: #1e293b; padding-bottom: 20px;">
+
+      <h2>SHIFT HANDOVER AUDIT</h2>
+
+      <p>Tracking permits from Shift ${esc(prev.shift)} on ${esc(prev.date)}</p>
+
+      <div class="report-actions">
+
+       <button id="capture-audit-btn" onclick="captureAuditImage()" style="background:#10b981; color:white;">📸 Save Image</button>
+
+      </div>
+
+
 
       <!-- SIMPLE TALLY DASHBOARD -->
-      <div style="display:none; gap:8px; margin-top: 16px;">
+
+      <div style="display: flex; gap:8px; margin-top: 16px;">
+
          <div style="flex:1; background:rgba(255,255,255,0.1); padding:10px 4px; border-radius:8px; text-align:center;">
+
             <div style="font-size:20px; font-weight:bold; color:#f8fafc">${prevPermits.length}</div>
+
             <div style="font-size:9px; color:#cbd5e1; text-transform:uppercase; margin-top:2px;">Total Prev</div>
+
          </div>
+
          <div style="flex:1; background:rgba(22, 163, 74, 0.2); border:1px solid rgba(22, 163, 74, 0.4); padding:10px 4px; border-radius:8px; text-align:center;">
+
             <div style="font-size:20px; font-weight:bold; color:#4ade80">${tallyReturned}</div>
+
             <div style="font-size:9px; color:#bbf7d0; text-transform:uppercase; margin-top:2px;">Returned</div>
+
          </div>
+
          <div style="flex:1; background:rgba(234, 88, 12, 0.2); border:1px solid rgba(234, 88, 12, 0.4); padding:10px 4px; border-radius:8px; text-align:center;">
+
             <div style="font-size:20px; font-weight:bold; color:#fb923c">${tallyExtended}</div>
+
             <div style="font-size:9px; color:#fed7aa; text-transform:uppercase; margin-top:2px;">Extended</div>
+
          </div>
+
          <div style="flex:1; background:rgba(225, 29, 72, 0.3); border:1px solid rgba(225, 29, 72, 0.5); padding:10px 4px; border-radius:8px; text-align:center;">
+
             <div style="font-size:20px; font-weight:bold; color:#fda4af">${unaccountedList.length}</div>
+
             <div style="font-size:9px; color:#fecdd3; text-transform:uppercase; margin-top:2px;">Unaccounted</div>
+
          </div>
+
       </div>
+
     </div>
+
     
+
     <div class="report-table-wrap">
+
       <table id="unaccounted-table">
+
         <thead>
+
           <tr>
+
             <th>#</th><th>Order No</th><th>Job Description</th><th>Section</th>
+
             <th>Receiver / Contact</th><th>Prev Issue</th><th>Status</th>
+
           </tr>
+
         </thead>
+
         <tbody>
+
           ${rows || `<tr><td colspan="6" style="text-align:center;color:#16a34a;padding:30px;font-weight:bold;">✅ All handover permits accounted for.</td></tr>`}
+
         </tbody>
+
       </table>
+
     </div>
+
     <p class="report-hint">Tap any missing permit to pull it into your shift as "Extended"</p>
+
   </div>`;
+
 }
 
+
+
 // ══════════════════════════════════════
+
 //  EXPORT & SHARE
+
 // ══════════════════════════════════════
+
 async function captureAuditImage() {
+
     // 1. Target the elements inside the renderUnaccounted / Audit structure
+
     const reportContainer = document.querySelector('.report'); 
+
     const tableWrap = document.querySelector('.report-table-wrap');
+
     // Finds the table inside your unaccounted layout
+
     const table = document.getElementById('unaccounted-table') || document.querySelector('.report-table-wrap table'); 
+
     
+
     // Target the specific wrapper where your new Save Image button sits
+
     const actions = document.getElementById('capture-audit-btn')?.parentElement;
+
     const hint = document.querySelector('.report-hint');
 
+
+
     if (!reportContainer || !tableWrap || !table) {
+
         alert("Audit components not found.");
+
         return;
+
     }
+
+
 
     const btn = document.getElementById('capture-audit-btn');
+
     const originalText = btn ? btn.innerText : "";
+
     if (btn) {
+
         btn.innerText = "⏳ Capturing Full View...";
+
         btn.disabled = true;
+
     }
+
+
 
     // Save original styles for layout restoration
+
     const oldWidth = tableWrap.style.width;
+
     const oldOverflow = tableWrap.style.overflow;
+
     const oldActionsDisplay = actions ? actions.style.display : "";
+
     const oldHintDisplay = hint ? hint.style.display : ""; // Preserved layout structure
 
+
+
     try {
+
         // Hide the green button row so it doesn't appear in the captured image
+
         if (actions) actions.style.display = "none";
+
         if (hint) hint.style.display = "none";
 
+
+
         // Force the table container to expand completely to its maximum scrollable width
+
         tableWrap.style.width = table.scrollWidth + "px";
+
         tableWrap.style.overflow = "visible";
 
+
+
         // Capture the entire report wrapper container
+
         const canvas = await html2canvas(reportContainer, {
+
             scale: 2, // Keeps text looking sharp
+
             backgroundColor: '#f1f5f9', // Matches your app's background card color
+
             windowWidth: table.scrollWidth + 32, // Accommodate the full table width matrix + padding
+
             useCORS: true
+
         });
 
+
+
         // Trigger file download using the preview state variables
+
         const imageUri = canvas.toDataURL("image/png");
+
         
+
         // Grab values dynamically from your prev object seen in your render code
+
         const auditDate = (typeof prev !== 'undefined' && prev.date) ? prev.date : 'Audit';
+
         const auditShift = (typeof prev !== 'undefined' && prev.shift) ? prev.shift : 'Shift';
+
         const fileName = `Audit_Report_${auditDate.replace(/\//g, "-")}_Shift_${auditShift}.png`;
 
+
+
         // Check specifically for iPhone/iPad environments
+
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+
+
         if (isIOS) {
+
             // Safe execution branch for iOS Chrome/Safari updates
+
             const newWindow = window.open();
+
             if (newWindow) {
+
                 newWindow.document.write(`
+
                     <html>
+
                         <head>
+
                             <title>Audit Report Preview</title>
+
                             <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
                             <style>
+
                                 body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; }
+
                                 img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+
                                 .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 14px; }
+
                             </style>
+
                         </head>
+
                         <body>
+
                             <div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div>
+
                             <img src="${imageUri}" alt="Audit Report" />
+
                         </body>
+
                     </html>
+
                 `);
+
                 newWindow.document.close();
+
             } else {
+
                 alert("Pop-up blocked! Please allow pop-ups for this site to view/save the report image.");
+
             }
+
         } else {
+
             // Kept your exact legacy desktop/Android download route completely intact
+
             const downloadLink = document.createElement("a");
+
             downloadLink.download = fileName;
+
             downloadLink.href = imageUri;
+
             
+
             document.body.appendChild(downloadLink);
+
             downloadLink.click();
+
             document.body.removeChild(downloadLink);
+
         }
+
+
 
     } catch (error) {
+
         console.error(error);
+
         alert("Capture failed. Try taking a normal screenshot.");
+
     } finally {
+
         // Reset all original structural layouts and visibility states back to normal
+
         tableWrap.style.width = oldWidth;
+
         tableWrap.style.overflow = oldOverflow;
+
         if (actions) actions.style.display = oldActionsDisplay;
+
         if (hint) hint.style.display = oldHintDisplay; // Balanced layout cleanup
 
+
+
         if (btn) {
+
             btn.innerText = originalText;
+
             btn.disabled = false;
+
         }
+
     }
+
 }
+
 async function captureReportImage() {
+
   const reportContainer = document.querySelector('.report');
+
   const tableWrap = document.querySelector('.report-table-wrap');
+
   const table = document.getElementById('report-table');
+
   const actions = document.querySelector('.report-actions');
+
   const hint = document.querySelector('.report-hint');
+
   
+
   if (!reportContainer || !tableWrap || !table) { 
+
     alert("Report components not found."); 
+
     return; 
+
   }
+
+
 
   const btn = document.getElementById('capture-btn');
+
   const originalText = btn.innerText;
+
   btn.innerText = "⏳ Capturing Full View..."; 
+
   btn.disabled = true;
 
+
+
   // Save original structural and visibility styles
+
   const oldWidth = tableWrap.style.width;
+
   const oldOverflow = tableWrap.style.overflow;
+
   const oldActionsDisplay = actions ? actions.style.display : "";
+
   const oldHintDisplay = hint ? hint.style.display : "";
 
+
+
   try {
+
     // 1. Hide interactive elements so they don't show up in the image
+
     if (actions) actions.style.display = "none";
+
     if (hint) hint.style.display = "none";
 
+
+
     // 2. FORCE the table container to expand completely to its maximum width
+
     tableWrap.style.width = table.scrollWidth + "px";
+
     tableWrap.style.overflow = "visible";
 
+
+
     // 3. Capture the entire report wrapper container
+
     const canvas = await html2canvas(reportContainer, { 
+
       scale: 2,                       // Keeps text looking sharp
+
       backgroundColor: '#f1f5f9',     // Matches app body background color
+
       windowWidth: table.scrollWidth + 32, // Accommodate the full table width matrix + padding
+
       useCORS: true
+
     });
 
+
+
     // Trigger file download
+
     const imageUri = canvas.toDataURL("image/png");
+
     const fileName = `Permit_Report_${meta.date.replace(/\//g, "-")}_Shift_${meta.shift}.png`;
 
+
+
     // Check if the current device is an iPhone or iPad running Mobile Chrome/Safari
+
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+
+
     if (isIOS) {
+
       // --- iOS CHROME WORKAROUND ---
+
       // Open the massive Base64 data string in a clean viewport tab for manual long-press save
+
       const newWindow = window.open();
+
       if (newWindow) {
+
         newWindow.document.write(`
+
           <html>
+
             <head>
+
               <title>Permit Report Preview</title>
+
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
               <style>
+
                 body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; }
+
                 img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+
                 .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 14px; }
+
               </style>
+
             </head>
+
             <body>
+
               <div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div>
+
               <img src="${imageUri}" alt="Report Image" />
+
             </body>
+
           </html>
+
         `);
+
         newWindow.document.close();
+
       } else {
+
         alert("Pop-up blocked! Please allow pop-ups for this site to view/save the generated image.");
+
       }
+
     } else {
+
       // --- STANDARD DESKTOP / ANDROID DOWNLOAD ---
+
       const downloadLink = document.createElement("a");
+
       downloadLink.download = fileName;
+
       downloadLink.href = imageUri;
+
       document.body.appendChild(downloadLink); 
+
       downloadLink.click(); 
+
       document.body.removeChild(downloadLink);
+
     }
 
+
+
   } catch (error) { 
+
     console.error(error);
+
     alert("Capture failed. Try taking a normal screenshot."); 
+
   } finally { 
+
     // Reset all original structural layouts and view states back to normal
+
     tableWrap.style.width = oldWidth;
+
     tableWrap.style.overflow = oldOverflow;
+
     if (actions) actions.style.display = oldActionsDisplay;
+
     if (hint) hint.style.display = oldHintDisplay;
+
     
+
     btn.innerText = originalText; 
+
     btn.disabled = false; 
+
   }
+
 }
+
+
+
+
 
 
 
 function exportExcel() {
-  const headers = ["#","Order No","Type","Section","Job Description","Receiver","Contact","Isolation Time","Issue Time","Extended Time","Returned Time","Permit Type","Issued By"];
+
+  const headers = ["#","Order No","Type","Section","Job Description","Receiver","Contact","Isolation Time","Issue Time","Extended Time","Returned Time","Permit Type","Status","Issued By"];
+
   const ap = activePermits();
-  const rows = ap.map((p,i)=>[
-    i+1, p.orderNo, classifyOrder(p.orderNo), p.section||"",
-    p.jobDescription, p.receiver, p.contactNo||"",
-    p.isolationTime||"", p.issueTime||"",
-    p.extendedTime||"", p.returnedTime||"",
-    (p.isOnline==="TRUE"||p.isOnline===true)?"Online":"Isolated",
-    p.issuer||""
-  ]);
-  const csv = [headers,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
-  const blob = new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+
+
+
+  const orderCounts = {};
+
+  ap.forEach(p => {
+
+    const num = String(p.orderNo || "").trim();
+
+    if (num) orderCounts[num] = (orderCounts[num] || 0) + 1;
+
+  });
+
+
+
+  const sectionPriority = { "Mechanical": 1, "Electrical": 2, "Operation": 3 };
+
+  const orderTypePriority = { "MA": 1, "M3": 2, "M4": 3, "M2": 4, "M1": 5 };
+
+
+
+  // Match the active screen criteria filter restrictions
+
+  const matchRules = {
+
+    "ALL": p => true,
+
+    "Mechanical": p => p.section==="Mechanical",
+
+    "Electrical": p => p.section==="Electrical",
+
+    "Operation": p => p.section==="Operation",
+
+    "returned": p => p.status==="returned",
+
+    "extended": p => p.status==="extended",
+
+    "neither": p => p.status!=="returned" && p.status!=="extended",
+
+    "MA": p => classifyOrder(p.orderNo)==="MA",
+
+    "M2": p => classifyOrder(p.orderNo)==="M2",
+
+    "M3": p => classifyOrder(p.orderNo)==="M3",
+
+    "M4": p => classifyOrder(p.orderNo)==="M4",
+
+    "duplicates": p => String(p.orderNo || "").trim() && orderCounts[String(p.orderNo || "").trim()] > 1
+
+  };
+
+
+
+  const permitsToProcess = matchRules[sectionFilter] ? ap.filter(matchRules[sectionFilter]) : ap.filter(p=>p.section===sectionFilter);
+
+
+
+  const sortedPermits = [...permitsToProcess].sort((a, b) => {
+
+    const secA = a.section || ""; const secB = b.section || "";
+
+    const pSecA = sectionPriority[secA] || 99; const pSecB = sectionPriority[secB] || 99;
+
+    if (pSecA !== pSecB) return pSecA - pSecB;
+
+
+
+    const typeA = classifyOrder(a.orderNo); const typeB = classifyOrder(b.orderNo);
+
+    const pTypeA = orderTypePriority[typeA] || 99; const pTypeB = orderTypePriority[typeB] || 99;
+
+    if (pTypeA !== pTypeB) return pTypeA - pTypeB;
+
+
+
+    return ap.indexOf(a) - ap.indexOf(b);
+
+  });
+
+
+
+  const rows = sortedPermits.map((p, i) => {
+
+    const currentNo = String(p.orderNo || "").trim();
+
+    const isDuplicate = orderCounts[currentNo] > 1;
+
+    const orderCellValue = isDuplicate ? `${p.orderNo} (⚠️ Duplicate)` : p.orderNo;
+
+
+
+    return [
+
+      i + 1, orderCellValue, classifyOrder(p.orderNo), p.section || "",
+
+      p.jobDescription, p.receiver, p.contactNo || "", p.isolationTime || "", 
+
+      p.issueTime || "", p.extendedTime || "", p.returnedTime || "",
+
+      (p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated",
+
+      p.status || "—", p.issuer || ""
+
+    ];
+
+  });
+
+
+
+  const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+
   const url = URL.createObjectURL(blob);
+
   const a = document.createElement("a");
-  a.href=url; a.download=`Permits_Shift${meta.shift}_${meta.date.replace(/\//g,"-")}.csv`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+
+  a.href = url; 
+
+  a.download = `Permits_${sectionFilter}_Shift${meta.shift}_${meta.date.replace(/\//g, "-")}.csv`;
+
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+
 }
+
+
 
 function shareReport() {
-  const ap2 = activePermits();
-  const lines = [
-    `PERMIT TRACKER`,`Date: ${meta.date}  Shift: ${meta.shift}`,`─────────────────────`,
-    ...ap2.map((p,i)=>{
-      const oType=classifyOrder(p.orderNo);
-      return [`${i+1}. Order: ${p.orderNo} [${oType}] | ${p.section||""}`,
-        `   Job: ${p.jobDescription}`,
-        `   Receiver: ${p.receiver}${p.contactNo?" | "+p.contactNo:""}`,
-        `   Isolation: ${p.isolationTime||"—"}  Issue: ${p.issueTime||"—"}`,
-        `   Extended: ${p.extendedTime||"—"}  Returned: ${p.returnedTime||"—"}`,
-        `   By: ${p.issuer||"—"}`].join("\n");
-    }),
-    `─────────────────────`,`Total: ${ap2.length} permits`
-  ];
-  const text = lines.join("\n");
-  if (navigator.share) {
-    navigator.share({title:`Permit Tracker – Shift ${meta.shift} ${meta.date}`,text});
-  } else {
-    navigator.clipboard.writeText(text).then(()=>{
-      alert("Report copied to clipboard! Paste into WhatsApp or Email.");
-    }).catch(()=>{
-      showModal(`<div class="modal-header"><span class="modal-title">Share Report</span><button class="close-btn" onclick="removeModal()">×</button></div>
-        <div class="modal-body"><p style="font-size:13px;color:#64748b;margin-bottom:10px">Copy and paste:</p>
-        <textarea style="width:100%;height:260px;font-size:12px;font-family:monospace;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px" onclick="this.select()">${esc(text)}</textarea></div>`);
-    });
+
+  const ap = activePermits();
+
+  
+
+  const orderCounts = {};
+
+  ap.forEach(p => {
+
+    const num = String(p.orderNo || "").trim();
+
+    if (num) orderCounts[num] = (orderCounts[num] || 0) + 1;
+
+  });
+
+
+
+  const sectionPriority = { "Mechanical": 1, "Electrical": 2, "Operation": 3 };
+
+  const orderTypePriority = { "MA": 1, "M3": 2, "M4": 3, "M2": 4, "M1": 5 };
+
+
+
+  const matchRules = {
+
+    "ALL": p => true,
+
+    "Mechanical": p => p.section==="Mechanical",
+
+    "Electrical": p => p.section==="Electrical",
+
+    "Operation": p => p.section==="Operation",
+
+    "returned": p => p.status==="returned",
+
+    "extended": p => p.status==="extended",
+
+    "neither": p => p.status!=="returned" && p.status!=="extended",
+
+    "MA": p => classifyOrder(p.orderNo)==="MA",
+
+    "M2": p => classifyOrder(p.orderNo)==="M2",
+
+    "M3": p => classifyOrder(p.orderNo)==="M3",
+
+    "M4": p => classifyOrder(p.orderNo)==="M4",
+
+    "duplicates": p => String(p.orderNo || "").trim() && orderCounts[String(p.orderNo || "").trim()] > 1
+
+  };
+
+
+
+  const permitsToProcess = matchRules[sectionFilter] ? ap.filter(matchRules[sectionFilter]) : ap.filter(p=>p.section===sectionFilter);
+
+
+
+  if (permitsToProcess.length === 0) {
+
+    alert(`No data to share for filter "${sectionFilter}".`);
+
+    return;
+
   }
+
+
+
+  const sortedPermits = [...permitsToProcess].sort((a, b) => {
+
+    const secA = a.section || ""; const secB = b.section || "";
+
+    const pSecA = sectionPriority[secA] || 99; const pSecB = sectionPriority[secB] || 99;
+
+    if (pSecA !== pSecB) return pSecA - pSecB;
+
+
+
+    const typeA = classifyOrder(a.orderNo); const typeB = classifyOrder(b.orderNo);
+
+    const pTypeA = orderTypePriority[typeA] || 99; const pTypeB = orderTypePriority[typeB] || 99;
+
+    if (pTypeA !== pTypeB) return pTypeA - pTypeB;
+
+
+
+    return ap.indexOf(a) - ap.indexOf(b);
+
+  });
+
+
+
+  let txt = `📋 *PERMIT TRACKER REPORT*\n📆 Date: ${meta.date} | ⏱️ Shift: ${meta.shift}\n📊 Filter: ${sectionFilter}\n\n`;
+
+
+
+  sortedPermits.forEach((p, i) => {
+
+    const currentNo = String(p.orderNo || "").trim();
+
+    const isDuplicate = orderCounts[currentNo] > 1;
+
+    const orderStr = isDuplicate ? `${p.orderNo} (⚠️ Duplicate)` : p.orderNo;
+
+    const oType = classifyOrder(p.orderNo);
+
+    const permitTypeStr = (p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated";
+
+
+
+    txt += `*#${i + 1} . Order No:* ${orderStr}\n`;
+
+    txt += `▪️ *Type:* ${oType}\n`;
+
+    txt += `▪️ *Section:* ${p.section || "—"}\n`;
+
+    txt += `▪️ *Description:* ${p.jobDescription}\n`;
+
+    txt += `▪️ *Receiver:* ${p.receiver} ${p.contactNo ? `(${p.contactNo})` : ""}\n`;
+
+    txt += `▪️ *Isolation Time:* ${p.isolationTime || "—"}\n`;
+
+    txt += `▪️ *Issue Time:* ${p.issueTime || "—"}\n`;
+
+    txt += `▪️ *Extended Time:* ${p.extendedTime || "—"}\n`;
+
+    txt += `▪️ *Returned Time:* ${p.returnedTime || "—"}\n`;
+
+    txt += `▪️ *Permit Type:* ${permitTypeStr}\n`;
+
+    txt += `▪️ *Status:* ${p.status || "—"}\n`;
+
+    txt += `▪️ *Issued By:* ${p.issuer || "—"}\n`;
+
+    txt += `--------------------------------------\n`;
+
+  });
+
+
+
+  if (navigator.share) {
+
+    navigator.share({ text: txt }).catch(err => console.log(err));
+
+  } else {
+
+    navigator.clipboard.writeText(txt).then(() => alert("Report text copied to clipboard!"));
+
+  }
+
 }
 
+
+
 // ══════════════════════════════════════
+
 //  MODAL
+
 // ══════════════════════════════════════
+
 function showModal(html) {
+
   removeModal();
+
   const overlay = document.createElement("div");
+
   overlay.className="overlay"; overlay.id="modal-overlay";
+
   overlay.innerHTML=`<div class="modal">${html}</div>`;
+
   overlay.addEventListener("click",e=>{if(e.target===overlay)removeModal();});
+
   document.body.appendChild(overlay);
+
 }
+
 function removeModal() { const el=document.getElementById("modal-overlay"); if(el) el.remove(); }
 
+
+
 // ══════════════════════════════════════
+
 //  AUTOCOMPLETE
+
 //  ROOT FIX: Never pass strings through
+
 //  onclick HTML attributes — they break
+
 //  on special chars and quotes.
+
 //  Instead: store matches in a JS Map,
+
 //  reference by numeric index only.
+
 // ══════════════════════════════════════
+
 let acTarget = null;
+
 const acStore = {}; // listId -> { matches[], inputId, field }
 
+
+
 function acGetSuggestions(field, query) {
+
   if (!query) return [];
+
   const q = query.toLowerCase();
+
   const seen = new Set();
+
   return permits
+
     .map(p => {
+
         // Safely convert whatever value exists to a string first
+
         const val = p[field] !== undefined && p[field] !== null ? String(p[field]) : "";
+
         return val.trim();
+
     })
+
     .filter(v => {
+
         if (!v || seen.has(v)) return false;
+
         seen.add(v);
+
         return v.toLowerCase().includes(q);
+
     })
+
     .slice(0, 7);
+
 }
+
+
 
 function acShow(field, inputId, listId) {
+
   const input = document.getElementById(inputId);
+
   const list  = document.getElementById(listId);
+
   if (!input||!list) return;
+
   const query = input.value;
+
   const matches = acGetSuggestions(field, query);
+
   if (!matches.length) { list.style.display="none"; return; }
 
+
+
   // Store matches in JS — DO NOT pass values through HTML attributes
+
   acStore[listId] = { matches, inputId, field };
 
+
+
   const q = query.toLowerCase();
+
   list.innerHTML = matches.map((m, idx)=>{
+
     const i = m.toLowerCase().indexOf(q);
+
     const hi = i>=0
+
       ? esc(m.slice(0,i))+"<b>"+esc(m.slice(i,i+q.length))+"</b>"+esc(m.slice(i+q.length))
+
       : esc(m);
+
     // Pass only the numeric index — completely safe in HTML attribute
+
     return `<div class="ac-item" data-idx="${idx}">${hi}</div>`;
+
   }).join("");
 
+
+
   // Attach listeners directly to DOM elements — no attribute encoding needed
+
   list.querySelectorAll(".ac-item").forEach(el=>{
+
     const handler = e=>{
+
       e.preventDefault();
+
       e.stopPropagation();
+
       const idx = parseInt(el.getAttribute("data-idx"));
+
       const store = acStore[listId];
+
       if (!store) return;
+
       const value = store.matches[idx];
+
       const inp = document.getElementById(store.inputId);
+
       if (inp) inp.value = value;
+
       list.style.display="none";
+
       acTarget = null;
+
       // Auto-fill contact when receiver picked
+
       if (store.field==="receiver") {
+
         const match = permits.find(p=>p.receiver===value&&p.contactNo);
+
         if (match) { const c=document.getElementById("f-contact"); if(c&&!c.value) c.value=match.contactNo; }
+
       }
+
       // Auto-fill job description when order number picked
+
       if (store.field==="orderNo") {
+
         const match = permits.find(p=>p.orderNo==value && p.jobDescription);
+
         if (match) { const jd=document.getElementById("f-jobDesc"); if (jd && !jd.value) jd.value = match.jobDescription; }
+
       }
+
     };
+
     el.addEventListener("touchend", handler, {passive:false});
+
     el.addEventListener("click", handler);
+
   });
+
+
 
   list.style.display="block";
+
   acTarget = listId;
+
 }
+
+
 
 // Close dropdown when tapping outside
+
 document.addEventListener("touchstart", e=>{
+
   if (!acTarget) return;
+
   const list = document.getElementById(acTarget);
+
   if (list && !list.contains(e.target)) { list.style.display="none"; acTarget=null; }
+
 }, true);
+
 document.addEventListener("click", e=>{
+
   if (!acTarget) return;
+
   const list = document.getElementById(acTarget);
+
   if (list && !list.contains(e.target)) { list.style.display="none"; acTarget=null; }
+
 }, true);
+
+
 
 function onOrderInput(val) {
+
     const type = classifyOrder(val);
+
     const el = document.getElementById("order-type-preview");
+
     if (el) {
+
         el.innerHTML = type && type !== "-" 
+
             ? `Type: <b class="badge ${orderTypeBadgeCls(type)}" style="font-size:11px">${type}</b>` 
+
             : val.length > 0 ? `<span style="color:#94a3b8">No match - ${val.length} digit(s)</span>` : "";
+
     }
+
     
+
     // Explicitly call autocomplete logic AFTER the DOM update is handled
+
     acShow('orderNo', 'f-orderNo', 'ac-orderNo');
+
 }
+
+
 
 function selectSection(sec) {
+
   const h=document.getElementById("f-section"); if(h) h.value=sec;
+
   document.querySelectorAll(".section-btn").forEach((btn,i)=>{
+
     btn.classList.remove("active-mech","active-elec","active-oper");
+
     if(i===0&&sec==="Mechanical") btn.classList.add("active-mech");
+
     if(i===1&&sec==="Electrical") btn.classList.add("active-elec");
+
     if(i===2&&sec==="Operation")  btn.classList.add("active-oper");
+
   });
+
 }
+
+
 
 function selectStatus(val) {
+
   const h=document.getElementById("f-status"); if(h) h.value=val;
+
   document.querySelectorAll(".ext-ret-btn").forEach(btn=>{
+
     btn.classList.remove("active-ext","active-ret");
+
   });
+
   const extBtn=document.getElementById("btn-extended");
+
   const retBtn=document.getElementById("btn-returned");
+
   if(val==="extended"&&extBtn) extBtn.classList.add("active-ext");
+
   if(val==="returned"&&retBtn) retBtn.classList.add("active-ret");
+
   // Show/hide time fields
+
   const extField=document.getElementById("ext-time-field");
+
   const retField=document.getElementById("ret-time-field");
+
   if(extField) extField.style.display = val==="extended"?"":"none";
+
   if(retField) retField.style.display = val==="returned"?"":"none";
+
 }
+
+
 
 function toggleOnline() {
+
   const iso=document.getElementById("iso-field");
+
   const chk=document.getElementById("f-online");
+
   if(iso) iso.style.display=chk.checked?"none":"";
+
 }
+
 function stampNow(id) { const el=document.getElementById(id); if(el) el.value=nowTime(); }
 
+
+
 // ══════════════════════════════════════
+
 //  PERMIT FORM
+
 // ══════════════════════════════════════
+
 function permitFormHTML(title, p={}, isEdit=false) {
+
   const isOnline = p.isOnline===true||p.isOnline==="TRUE";
+
   const section  = p.section||"";
+
   const status   = p.status||"";
+
   const oType    = classifyOrder(p.orderNo);
+
   const showExt  = status==="extended";
+
   const showRet  = status==="returned";
 
+
+
   return `
+
     <div class="modal-header">
+
       <span class="modal-title">${title}</span>
+
       <button class="close-btn" onclick="removeModal()">×</button>
+
     </div>
+
     <div class="modal-body">
 
+
+
       <div class="field">
+
     <label>Order No *</label>
+
     <div class="ac-wrap">
+
         <input id="f-orderNo" type="text" inputmode="numeric" pattern="[0-9]*"
+
                placeholder="e.g. 450312" value="${esc(p.orderNo||"")}"
+
                oninput="onOrderInput(this.value)"
+
                onfocus="acShow('orderNo','f-orderNo','ac-orderNo')"
+
                autocomplete="off">
+
         <div class="order-type-preview" id="order-type-preview">
+
             ${oType&&oType!=="-"?`Type: <b>${oType}</b>`:''}
+
         </div>
+
         <div class="ac-list" id="ac-orderNo"></div>
+
     </div>
+
 </div>
 
+
+
       <div class="field">
+
         <label>Job Description *</label>
+
         <div class="ac-wrap">
+
           <textarea id="f-jobDesc" rows="3" placeholder="Describe the job..."
+
             oninput="acShow('jobDescription','f-jobDesc','ac-jobDesc')"
+
             onfocus="acShow('jobDescription','f-jobDesc','ac-jobDesc')"
+
             autocomplete="off">${esc(p.jobDescription||"")}</textarea>
+
           <div class="ac-list" id="ac-jobDesc"></div>
+
         </div>
+
       </div>
 
+
+
       <div class="field">
+
         <label>Receiver *</label>
+
         <div class="ac-wrap">
+
           <input id="f-receiver" placeholder="Receiver name"
+
             value="${esc(p.receiver||"")}"
+
             oninput="acShow('receiver','f-receiver','ac-receiver')"
+
             onfocus="acShow('receiver','f-receiver','ac-receiver')"
+
             autocomplete="off">
+
           <div class="ac-list" id="ac-receiver"></div>
+
         </div>
+
       </div>
 
+
+
       <div class="field">
+
         <label>Contact No</label>
+
         <div class="ac-wrap">
+
           <input id="f-contact" type="tel" inputmode="numeric" placeholder="Mobile number"
+
             value="${esc(p.contactNo||"")}"
+
             oninput="acShow('contactNo','f-contact','ac-contact')"
+
             onfocus="acShow('contactNo','f-contact','ac-contact')"
+
             autocomplete="off">
+
           <div class="ac-list" id="ac-contact"></div>
+
         </div>
+
       </div>
 
+
+
       <div class="field">
+
         <label>Section *</label>
+
         <div class="section-select-row">
+
           <button type="button" class="section-btn ${section==="Mechanical"?"active-mech":""}" onclick="selectSection('Mechanical')">⚙️ Mechanical</button>
+
           <button type="button" class="section-btn ${section==="Electrical"?"active-elec":""}" onclick="selectSection('Electrical')">⚡ Electrical</button>
+
           <button type="button" class="section-btn ${section==="Operation"?"active-oper":""}"  onclick="selectSection('Operation')">🏗️ Operation</button>
+
         </div>
+
         <input type="hidden" id="f-section" value="${esc(section)}">
+
       </div>
+
+
 
       <div class="toggle-row">
+
         <input type="checkbox" id="f-online" ${isOnline?"checked":""} onchange="toggleOnline()">
+
         <label for="f-online">Online Permit (no isolation required)</label>
+
       </div>
+
+
 
       <div id="iso-field" class="field" style="${isOnline?"display:none":""}">
+
         <label>Isolation Time</label>
+
         <div class="time-row">
+
           <input id="f-isoTime" type="time" value="${esc(p.isolationTime||"")}">
+
           <button type="button" class="now-btn" onclick="stampNow('f-isoTime')">Now</button>
+
         </div>
+
       </div>
 
+
+
       <div class="field">
+
         <label>Issue Time</label>
+
         <div class="time-row">
+
           <input id="f-issueTime" type="time" value="${esc(p.issueTime||"")}">
+
           <button type="button" class="now-btn" onclick="stampNow('f-issueTime')">Now</button>
+
         </div>
+
       </div>
 
+
+
       <div class="field">
+
         <label>Permit Status</label>
+
         <div class="ext-ret-row">
+
           <button type="button" class="ext-ret-btn ${showExt?"active-ext":""}" id="btn-extended" onclick="selectStatus(${showExt?"''":`'extended'`})">⏰ Extended</button>
+
           <button type="button" class="ext-ret-btn ${showRet?"active-ret":""}" id="btn-returned" onclick="selectStatus(${showRet?"''":`'returned'`})">🔁 Returned</button>
+
         </div>
+
         <input type="hidden" id="f-status" value="${esc(status)}">
+
       </div>
+
+
 
       <div id="ext-time-field" class="field" style="${showExt?"":"display:none"}">
+
         <label>Extended Time</label>
+
         <div class="time-row">
+
           <input id="f-extTime" type="time" value="${esc(p.extendedTime||"")}">
+
           <button type="button" class="now-btn" onclick="stampNow('f-extTime')">Now</button>
+
         </div>
+
       </div>
+
+
 
       <div id="ret-time-field" class="field" style="${showRet?"":"display:none"}">
+
         <label>Returned Time</label>
+
         <div class="time-row">
+
           <input id="f-retTime" type="time" value="${esc(p.returnedTime||"")}">
+
           <button type="button" class="now-btn" onclick="stampNow('f-retTime')">Now</button>
+
         </div>
+
       </div>
+
+
 
       <div class="btn-row">
+
         ${isEdit?`<button type="button" class="btn-danger" onclick="confirmDelete()">Delete</button>`:""}
+
         <button type="button" class="btn-primary" id="save-btn" onclick="savePermit(${isEdit})">
+
           ${isEdit?"Update Permit":"Add Permit"}
+
         </button>
+
       </div>
+
     </div>`;
+
 }
 
 
+
+
+
 // ══════════════════════════════════════
+
 //  SCAN PERMIT via Tesseract OCR
+
 // ══════════════════════════════════════
+
 function startScan() {
+
   showModal(`
+
     <div class="modal-header">
+
       <span class="modal-title">📷 Scan Permit</span>
+
       <button class="close-btn" onclick="removeModal()">×</button>
+
     </div>
+
     <div class="modal-body">
+
       <p style="font-size:13px;color:#64748b;margin-bottom:14px">
+
         Take a clear photo of the permit. Point camera at the top section showing <b>Order No</b> and <b>Description of Work</b>.
+
       </p>
+
       <img id="scan-preview" class="scan-preview">
+
       <div id="scan-status" class="scan-status">⏳ Reading permit...</div>
+
       <input type="file" id="scan-file" accept="image/*" capture="environment" onchange="processScan(this)">
+
       <button class="btn-primary" onclick="document.getElementById('scan-file').click()">
+
         📷 Open Camera
+
       </button>
+
       <button class="btn-secondary" style="margin-top:10px;width:100%" onclick="showPermitForm()">
+
         ✏️ Skip — Enter Manually
+
       </button>
+
     </div>`);
+
 }
+
+
 
 async function processScan(input) {
+
   const file = input.files[0];
+
   if (!file) return;
 
+
+
   // Show preview
+
   const preview = document.getElementById("scan-preview");
+
   preview.src = URL.createObjectURL(file);
+
   preview.style.display = "block";
 
+
+
   const status = document.getElementById("scan-status");
+
   status.style.display = "block";
+
   status.innerHTML = "⏳ Reading permit... this takes ~10 seconds";
 
+
+
   try {
+
     const result = await Tesseract.recognize(file, "eng", {
+
       logger: m => {
+
         if (m.status === "recognizing text") {
+
           const pct = Math.round(m.progress * 100);
+
           if (status) status.innerHTML = "⏳ Reading... " + pct + "%";
+
         }
+
       }
+
     });
 
+
+
     const text = result.data.text;
+
     console.log("OCR raw text:", text);
 
+
+
     // Extract Order No — find 8 or 9 digit number
+
     // Permit format: Order No/HW  14054013/200664255
+
     // We want the FIRST number before the slash — the work order
+
     const orderMatch = text.match(/\b(1\d{7}|[1-4]\d{8})\b/);
+
     const orderNo = orderMatch ? orderMatch[1] : "";
 
+
+
     // Extract Description of Work
+
     // Label on permit: "Description of Work"
+
     const descMatch = text.match(/Description\s+of\s+Work[:\s]+([^\n]+)/i);
+
     let jobDesc = descMatch ? descMatch[1].trim() : "";
+
     // Clean up OCR noise — remove leading punctuation
+
     jobDesc = jobDesc.replace(/^[^a-zA-Z0-9]+/, "").trim();
+
+
 
     status.style.display = "none";
 
+
+
     if (!orderNo && !jobDesc) {
+
       status.style.display = "block";
+
       status.style.background = "#fff1f2";
+
       status.style.borderColor = "#fecdd3";
+
       status.style.color = "#be123c";
+
       status.innerHTML = "⚠️ Could not read permit clearly. Try better lighting or enter manually.";
+
       return;
+
     }
+
+
 
     // Open form with extracted values pre-filled
+
     removeModal();
+
     showPermitForm({ orderNo, jobDescription: jobDesc });
 
+
+
     // Show what was found
+
     if (orderNo || jobDesc) {
+
       setTimeout(() => {
+
         const banner = document.createElement("div");
+
         banner.style = "background:#dcfce7;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;font-size:12px;color:#16a34a;margin-bottom:14px";
+
         banner.innerHTML = "✅ Scanned: " +
+
           (orderNo ? "<b>Order " + orderNo + "</b> " : "") +
+
           (jobDesc ? "· " + jobDesc.slice(0,40) + (jobDesc.length>40?"...":"") : "");
+
         const body = document.querySelector(".modal-body");
+
         if (body) body.insertBefore(banner, body.firstChild);
+
       }, 100);
+
     }
+
+
 
   } catch(err) {
+
     console.error("OCR error:", err);
+
     if (status) {
+
       status.style.display = "block";
+
       status.style.background = "#fff1f2";
+
       status.style.color = "#be123c";
+
       status.innerHTML = "❌ Scan failed. Please enter manually.";
+
     }
+
   }
+
 }
 
+
+
 // ══════════════════════════════════════
+
 //  SAVE / DELETE
+
 // ══════════════════════════════════════
+
 async function savePermit(isEdit) {
+
   const orderNo        = document.getElementById("f-orderNo").value.trim();
+
   const jobDescription = document.getElementById("f-jobDesc").value.trim();
+
   const receiver       = document.getElementById("f-receiver").value.trim();
+
   const contactNo      = document.getElementById("f-contact").value.trim();
+
   const section        = document.getElementById("f-section").value.trim();
+
   const status         = document.getElementById("f-status").value.trim();
+
   const isOnline       = document.getElementById("f-online").checked;
+
   const isolationTime  = isOnline?"":(document.getElementById("f-isoTime").value||"");
+
   const issueTime      = document.getElementById("f-issueTime").value||"";
+
   const extendedTime   = document.getElementById("f-extTime")?.value||"";
+
   const returnedTime   = document.getElementById("f-retTime")?.value||"";
 
+
+
   if (!orderNo||!jobDescription||!receiver) { alert("Order No, Job Description and Receiver are required."); return; }
+
   if (!section) { alert("Please select a Section."); return; }
 
+
+
   const btn = document.getElementById("save-btn");
+
   btn.disabled=true; btn.textContent="Saving...";
 
+
+
   try {
+
     const permit = { orderNo, jobDescription, receiver, contactNo, section, status, isOnline, isolationTime, issueTime, extendedTime, returnedTime, issuer:meta.issuer, shiftDate:meta.date, shift:meta.shift };
+
     if (isEdit) { permit.id=editingPermit.id; await api("update",{permit}); }
+
     else { await api("add",{permit}); }
+
     removeModal(); await doRefresh();
+
   } catch(err) {
+
     alert("Save failed: "+err.message);
+
     btn.disabled=false; btn.textContent=isEdit?"Update Permit":"Add Permit";
+
   }
+
 }
+
+
 
 async function confirmDelete() {
+
   if (!confirm("Delete this permit entry?")) return;
+
   try { await api("delete",{id:editingPermit.id}); removeModal(); await doRefresh(); }
+
   catch(err) { alert("Delete failed: "+err.message); }
+
 }
+
+
 
 function openAdd() {
+
   showModal(`
+
     <div class="modal-header">
+
       <span class="modal-title">New Permit</span>
+
       <button class="close-btn" onclick="removeModal()">×</button>
+
     </div>
+
     <div class="modal-body">
+
       <p style="font-size:13px;color:#64748b;margin-bottom:14px">How do you want to add this permit?</p>
+
       <div class="scan-choice">
+
         <button onclick="startScan()">
+
           <span>📷</span>
+
           Scan Permit
+
         </button>
+
         <button onclick="showPermitForm()">
+
           <span>✏️</span>
+
           Enter Manually
+
         </button>
+
       </div>
+
     </div>`);
+
 }
+
+
 
 function showPermitForm(prefill={}) {
+
   showModal(permitFormHTML("New Permit", prefill, false));
-}
-function openEdit(id) {
-  editingPermit = permits.find(p=>String(p.id)===String(id));
-  if (!editingPermit) { alert("Could not find permit. Try refreshing."); return; }
-  showModal(permitFormHTML("Edit Permit",editingPermit,true));
+
 }
 
-// ══════════════════════════════════════
-//  SETUP
-// ══════════════════════════════════════
-function openSetup() {
-  showModal(`
-    <div class="modal-header"><span class="modal-title">Shift Setup</span><button class="close-btn" onclick="removeModal()">×</button></div>
-    <div class="modal-body">
-      <p style="font-size:13px;color:#64748b;margin-bottom:16px">Each phone sets its own issuer name. Date and shift are shared.</p>
-      <div class="field"><label>Date</label><input id="s-date" type="date" value="${meta.date.split("/").reverse().join("-")}"></div>
-      <div class="field">
-  <label>Shift</label>
-  <select id="s-shift">
-    ${["", "A", "B", "C", "G"].map(s => `<option value="${s}" ${meta.shift === s ? "selected" : ""}>${s === "" ? "— All Shifts (Blank) —" : s}</option>`).join("")}
-  </select>
-</div>
-      <div class="field"><label>Your Name (Issuer)</label><input id="s-issuer" placeholder="e.g. Omkar" value="${esc(meta.issuer||"")}"></div>
-      <button class="btn-primary" onclick="saveSetup()">Save & Continue</button>
-      <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9">
-        <button onclick="resetUrl()" style="background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer">Change API URL</button>
-      </div>
-    </div>`);
+function openEdit(id) {
+
+  editingPermit = permits.find(p=>String(p.id)===String(id));
+
+  if (!editingPermit) { alert("Could not find permit. Try refreshing."); return; }
+
+  showModal(permitFormHTML("Edit Permit",editingPermit,true));
+
 }
+
+
+
+// ══════════════════════════════════════
+
+//  SETUP
+
+// ══════════════════════════════════════
+
+function openSetup() {
+
+  showModal(`
+
+    <div class="modal-header"><span class="modal-title">Shift Setup</span><button class="close-btn" onclick="removeModal()">×</button></div>
+
+    <div class="modal-body">
+
+      <p style="font-size:13px;color:#64748b;margin-bottom:16px">Each phone sets its own issuer name. Date and shift are shared.</p>
+
+      <div class="field"><label>Date</label><input id="s-date" type="date" value="${meta.date.split("/").reverse().join("-")}"></div>
+
+      <div class="field">
+
+  <label>Shift</label>
+
+  <select id="s-shift">
+
+    ${["", "A", "B", "C", "G"].map(s => `<option value="${s}" ${meta.shift === s ? "selected" : ""}>${s === "" ? "— All Shifts (Blank) —" : s}</option>`).join("")}
+
+  </select>
+
+</div>
+
+      <div class="field"><label>Your Name (Issuer)</label><input id="s-issuer" placeholder="e.g. Omkar" value="${esc(meta.issuer||"")}"></div>
+
+      <button class="btn-primary" onclick="saveSetup()">Save & Continue</button>
+
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9">
+
+        <button onclick="resetUrl()" style="background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer">Change API URL</button>
+
+      </div>
+
+    </div>`);
+
+}
+
+
 
 async function saveSetup() {
+
   const parts = document.getElementById("s-date").value.split("-");
+
   meta = {
+
     date:   parts[2]+"/"+parts[1]+"/"+parts[0],
+
     shift:  document.getElementById("s-shift").value,
+
     issuer: document.getElementById("s-issuer").value.trim()
+
   };
+
   // Save to localStorage — this is the source of truth for meta
+
   localStorage.setItem("ars2_meta", JSON.stringify(meta));
+
   removeModal();
+
   render();
+
 }
+
+
 
 function saveUrl() {
+
   const url=document.getElementById("url-input").value.trim();
+
   if (!url.startsWith("https://script.google.com")) { alert("Please paste a valid Google Apps Script URL."); return; }
+
   API_URL=url; localStorage.setItem("ars2_api_url",url); init();
+
 }
+
 function resetUrl() {
+
   if (!confirm("Reset API URL?")) return;
+
   API_URL=""; localStorage.removeItem("ars2_api_url"); removeModal(); render();
+
 }
+
+
 
 function setFilter(s) { sectionFilter=s; render(); }
+
 function switchView(v) { currentView=v; render(); }
 
+
+
 async function doRefresh() {
+
   if (!API_URL) return;
+
   syncing=true; render();
+
   try { await loadAll(); } catch(err) { console.error(err); }
+
   syncing=false; render();
+
 }
+
+
 
 async function init() {
+
   render(); if (!API_URL) return;
+
   await doRefresh();
+
   if (refreshTimer) clearInterval(refreshTimer);
+
   refreshTimer = setInterval(doRefresh,20000);
+
 }
 
+
+
 init();
+
 </script>
+
 </body>
+
 </html>
+
