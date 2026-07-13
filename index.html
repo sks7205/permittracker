@@ -494,12 +494,18 @@ function renderSyncBar() {
 }
 function renderSectionFilter() {
   const ap = activePermits();
-  // Pre-calculate occurrences to show an accurate real-time count on the filter pill
-  const orderCounts = {};
+  
+  // 1. Pre-calculate occurrences of Order No within the SAME SHIFT once
+  const orderShiftCounts = {};
   ap.forEach(p => {
     const num = String(p.orderNo || "").trim();
-    if (num) orderCounts[num] = (orderCounts[num] || 0) + 1;
+    const shift = String(p.shift || "").trim();
+    if (num && shift) {
+      const key = `${num}-${shift}`;
+      orderShiftCounts[key] = (orderShiftCounts[key] || 0) + 1;
+    }
   });
+
   const defs = [
     {key:"ALL",        cls:["pill-all","pill-all-off"],   label:"All", match: p => true},
     {key:"Mechanical", cls:["pill-mech","pill-mech-off"], label:"⚙️ Mechanical", match: p => p.section==="Mechanical"},
@@ -512,8 +518,18 @@ function renderSectionFilter() {
     {key:"M2",         cls:["pill-m2","pill-m2-off"],        label:"M2", match: p => classifyOrder(p.orderNo)==="M2"},
     {key:"M3",         cls:["pill-m3","pill-m3-off"],        label:"M3", match: p => classifyOrder(p.orderNo)==="M3"},
     {key:"M4",         cls:["pill-m4","pill-m4-off"],        label:"M4", match: p => classifyOrder(p.orderNo)==="M4"},
-    {key:"duplicates", cls:["pill-duplicate","pill-duplicate-off"], label:"⚠️ Duplicates", match: p => String(p.orderNo || "").trim() && orderCounts[String(p.orderNo || "").trim()] > 1}
+    {
+      key:"duplicates", 
+      cls:["pill-duplicate","pill-duplicate-off"], 
+      label:"⚠️ Duplicates", 
+      match: p => {
+        const num = String(p.orderNo || "").trim();
+        const shift = String(p.shift || "").trim();
+        return num && shift && orderShiftCounts[`${num}-${shift}`] > 1;
+      }
+    }
   ];
+
   return `<div class="section-filter">${defs.map(d=>{
     const count = ap.filter(d.match).length;
     const on = sectionFilter===d.key;
@@ -522,14 +538,18 @@ function renderSectionFilter() {
 }
 function renderList() {
   const ap = activePermits();
-  // 1. Count occurrences of each Order No in the current shift
-  const orderCounts = {};
+  
+  // 1. FIXED: Pre-calculate occurrences of Order No within the SAME SHIFT
+  const orderShiftCounts = {};
   ap.forEach(p => {
     const num = String(p.orderNo || "").trim();
-    if (num) {
-      orderCounts[num] = (orderCounts[num] || 0) + 1;
+    const shift = String(p.shift || "").trim();
+    if (num && shift) {
+      const key = `${num}-${shift}`; // Unique shift-scoped key combo
+      orderShiftCounts[key] = (orderShiftCounts[key] || 0) + 1;
     }
   });
+
   // Set accurate filtering conditions matching the selected filter option
   const matchRules = {
     "ALL": p => true,
@@ -543,10 +563,17 @@ function renderList() {
     "M2": p => classifyOrder(p.orderNo)==="M2",
     "M3": p => classifyOrder(p.orderNo)==="M3",
     "M4": p => classifyOrder(p.orderNo)==="M4",
-    "duplicates": p => String(p.orderNo || "").trim() && orderCounts[String(p.orderNo || "").trim()] > 1
+    "duplicates": p => {
+      const num = String(p.orderNo || "").trim();
+      const shift = String(p.shift || "").trim();
+      return num && shift && orderShiftCounts[`${num}-${shift}`] > 1;
+    }
   };
+
   const filtered = matchRules[sectionFilter] ? ap.filter(matchRules[sectionFilter]) : ap.filter(p=>p.section===sectionFilter);
+  
   if (ap.length===0) return `${renderSectionFilter()}<div class="list"><div class="empty"><div class="empty-icon">📋</div><h3>No permits for this date/shift</h3><p>Tap + to add first permit</p></div></div>`;
+  
   const cards = filtered.map(p=>{
     const hasIso   = !!p.isolationTime;
     const hasIssue = !!p.issueTime;
@@ -556,9 +583,13 @@ function renderList() {
     const stCls    = returned?"badge-green":extended?"badge-orange":hasIssue?"badge-blue":hasIso?"badge-yellow":"badge-gray";
     const oType    = classifyOrder(p.orderNo);
     const idx      = ap.indexOf(p)+1;
-    // Determine if this specific entry is a duplicate
+    
+    // FIXED: Check duplicates against the compound key sequence
     const currentNo = String(p.orderNo || "").trim();
-    const isDuplicate = orderCounts[currentNo] > 1;
+    const currentShift = String(p.shift || "").trim();
+    const isDuplicate = currentNo && currentShift && orderShiftCounts[`${currentNo}-${currentShift}`] > 1;
+    const shiftCount = isDuplicate ? orderShiftCounts[`${currentNo}-${currentShift}`] : 0;
+
     return `<div class="card" onclick="openEdit('${esc(p.id)}')">
       <div class="card-top">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -566,7 +597,7 @@ function renderList() {
           <span class="card-order">${esc(p.orderNo)}</span>
           ${oType&&oType!=="—"?`<span class="badge ${orderTypeBadgeCls(oType)}">${oType}</span>`:""}
           ${p.isOnline?`<span class="badge badge-blue">Online</span>`:""}
-          ${isDuplicate ? `<span class="badge badge-duplicate">⚠️ Duplicate (${orderCounts[currentNo]}x)</span>` : ""}
+          ${isDuplicate ? `<span class="badge badge-duplicate">⚠️ Duplicate (${shiftCount}x)</span>` : ""}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <span class="badge ${stCls}">${status}</span>
@@ -585,23 +616,30 @@ function renderList() {
       </div>
     </div>`;
   }).join("");
+  
   const emptyMsg = filtered.length===0?`<div class="empty"><div class="empty-icon">🔍</div><h3>No ${sectionFilter} permits</h3></div>`:"";
   return `${renderSectionFilter()}<div class="list">${cards}${emptyMsg}</div>`;
 }
+
 function renderReport() {
   const ap = activePermits();
-  // 1. Pre-calculate occurrences of each Order No in the current shift
-  const orderCounts = {};
+  
+  // 1. FIXED: Pre-calculate occurrences of Order No within the SAME SHIFT
+  const orderShiftCounts = {};
   ap.forEach(p => {
     const num = String(p.orderNo || "").trim();
-    if (num) {
-      orderCounts[num] = (orderCounts[num] || 0) + 1;
+    const shift = String(p.shift || "").trim();
+    if (num && shift) {
+      const key = `${num}-${shift}`; // Unique key combination
+      orderShiftCounts[key] = (orderShiftCounts[key] || 0) + 1;
     }
   });
+  
   // Define priorities for Section and Order Type sorting rules
   const sectionPriority = { "Mechanical": 1, "Electrical": 2, "Operation": 3 };
   const orderTypePriority = { "MA": 1, "M3": 2, "M4": 3, "M2": 4, "M1": 5 };
-  // 2. Define the matching rules identical to renderList()
+  
+  // 2. FIXED: Updated matching rules to respect the shift-scoped duplicate key
   const matchRules = {
     "ALL": p => true,
     "Mechanical": p => p.section==="Mechanical",
@@ -614,10 +652,16 @@ function renderReport() {
     "M2": p => classifyOrder(p.orderNo)==="M2",
     "M3": p => classifyOrder(p.orderNo)==="M3",
     "M4": p => classifyOrder(p.orderNo)==="M4",
-    "duplicates": p => String(p.orderNo || "").trim() && orderCounts[String(p.orderNo || "").trim()] > 1
+    "duplicates": p => {
+      const num = String(p.orderNo || "").trim();
+      const shift = String(p.shift || "").trim();
+      return num && shift && orderShiftCounts[`${num}-${shift}`] > 1;
+    }
   };
+  
   // 3. Apply the active filter restriction BEFORE sorting
   const permitsToProcess = matchRules[sectionFilter] ? ap.filter(matchRules[sectionFilter]) : ap.filter(p=>p.section===sectionFilter);
+  
   // 4. Sort the filtered subset sequence
   const sortedPermits = [...permitsToProcess].sort((a, b) => {
     const secA = a.section || "";
@@ -632,12 +676,17 @@ function renderReport() {
     if (pTypeA !== pTypeB) return pTypeA - pTypeB;
     return ap.indexOf(a) - ap.indexOf(b);
   });
+  
   // Map over filtered/sorted array to build table report rows
   const rows = sortedPermits.map((p, i) => {
     const oType = classifyOrder(p.orderNo);
     const currentNo = String(p.orderNo || "").trim();
-    const isDuplicate = orderCounts[currentNo] > 1;
+    const currentShift = String(p.shift || "").trim();
+    
+    // FIXED: Check duplicates against the compound key
+    const isDuplicate = currentNo && currentShift && orderShiftCounts[`${currentNo}-${currentShift}`] > 1;
     const rowBgStyle = isDuplicate ? ' style="background-color: #fee2e2;"' : '';
+    
     return `<tr${rowBgStyle}>
       <td>${i + 1}</td>
       <td style="font-family:monospace;font-weight:700">
@@ -659,8 +708,10 @@ function renderReport() {
       <td>${esc(p.issuer || "")}</td>
     </tr>`;
   }).join("");
+  
   // Visual label badge for current filter context in the report header
   const filterLabel = sectionFilter === "ALL" ? "All Records" : `Filtered: ${sectionFilter}`;
+  
   return `<div class="report">
     <div class="report-header">
       <h2>PERMIT TRACKER</h2>
@@ -1299,14 +1350,22 @@ async function captureReportImage() {
 function exportExcel() {
   const headers = ["#","Order No","Type","Section","Job Description","Receiver","Contact","Isolation Time","Issue Time","Extended Time","Returned Time","Permit Type","Status","Issued By"];
   const ap = activePermits();
-  const orderCounts = {};
+  
+  // 1. FIXED: Pre-calculate occurrences of Order No within the SAME SHIFT
+  const orderShiftCounts = {};
   ap.forEach(p => {
     const num = String(p.orderNo || "").trim();
-    if (num) orderCounts[num] = (orderCounts[num] || 0) + 1;
+    const shift = String(p.shift || "").trim();
+    if (num && shift) {
+      const key = `${num}-${shift}`;
+      orderShiftCounts[key] = (orderShiftCounts[key] || 0) + 1;
+    }
   });
+  
   const sectionPriority = { "Mechanical": 1, "Electrical": 2, "Operation": 3 };
   const orderTypePriority = { "MA": 1, "M3": 2, "M4": 3, "M2": 4, "M1": 5 };
-  // Match the active screen criteria filter restrictions
+  
+  // 2. FIXED: Updated matching rules to use the shift-scoped duplicate rule
   const matchRules = {
     "ALL": p => true,
     "Mechanical": p => p.section==="Mechanical",
@@ -1319,9 +1378,15 @@ function exportExcel() {
     "M2": p => classifyOrder(p.orderNo)==="M2",
     "M3": p => classifyOrder(p.orderNo)==="M3",
     "M4": p => classifyOrder(p.orderNo)==="M4",
-    "duplicates": p => String(p.orderNo || "").trim() && orderCounts[String(p.orderNo || "").trim()] > 1
+    "duplicates": p => {
+      const num = String(p.orderNo || "").trim();
+      const shift = String(p.shift || "").trim();
+      return num && shift && orderShiftCounts[`${num}-${shift}`] > 1;
+    }
   };
+  
   const permitsToProcess = matchRules[sectionFilter] ? ap.filter(matchRules[sectionFilter]) : ap.filter(p=>p.section===sectionFilter);
+  
   const sortedPermits = [...permitsToProcess].sort((a, b) => {
     const secA = a.section || ""; const secB = b.section || "";
     const pSecA = sectionPriority[secA] || 99; const pSecB = sectionPriority[secB] || 99;
@@ -1331,10 +1396,15 @@ function exportExcel() {
     if (pTypeA !== pTypeB) return pTypeA - pTypeB;
     return ap.indexOf(a) - ap.indexOf(b);
   });
+  
   const rows = sortedPermits.map((p, i) => {
     const currentNo = String(p.orderNo || "").trim();
-    const isDuplicate = orderCounts[currentNo] > 1;
+    const currentShift = String(p.shift || "").trim();
+    
+    // FIXED: Verify duplicate criteria against the shift-scoped compound key
+    const isDuplicate = currentNo && currentShift && orderShiftCounts[`${currentNo}-${currentShift}`] > 1;
     const orderCellValue = isDuplicate ? `${p.orderNo} (⚠️ Duplicate)` : p.orderNo;
+    
     return [
       i + 1, orderCellValue, classifyOrder(p.orderNo), p.section || "",
       p.jobDescription, p.receiver, p.contactNo || "", p.isolationTime || "", 
@@ -1343,13 +1413,22 @@ function exportExcel() {
       p.status || "—", p.issuer || ""
     ];
   });
+  
   const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; 
   a.download = `Permits_${sectionFilter}_Shift${meta.shift}_${meta.date.replace(/\//g, "-")}.csv`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  
+  document.body.appendChild(a); 
+  a.click(); 
+  
+  // Clean up execution environment immediately
+  setTimeout(() => {
+    document.body.removeChild(a); 
+    URL.revokeObjectURL(url);
+  }, 100);
 }
 function shareReport() {
   const ap = activePermits();
