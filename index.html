@@ -129,13 +129,11 @@
 table, th, td, .card, .card-order, .card-desc {
   color: #000000 !important;
 }
-
 /* Ensure data cell typography in even alternating row backgrounds is also black */
 tr:nth-child(even) td {
   background: #f8fafc;
   color: #000000 !important;
 }
-
 /* Ensure labels inside the Range Audit container view remain legible and black */
 .range-audit-container, .range-audit-container p, .range-audit-containerspan {
   color: #000000 !important;
@@ -169,7 +167,6 @@ tr:nth-child(even) td {
 // ══════════════════════════════════════
 let API_URL = localStorage.getItem("ars2_api_url") || "";
 let permits = [];
-
 // ─── ADDED FOR GLOBAL TRUST REGISTRY LAYER ───
 if (!localStorage.getItem("DEVICE_TOKEN")) {
   const arr = new Uint8Array(16);
@@ -211,35 +208,27 @@ function getShiftScore(dateStr, shift) {
   const month = parseInt(parts[1], 10) - 1;
   const year = parseInt(parts[2], 10);
   const dateObj = new Date(year, month, day);
-  
   let shiftVal = 0;
   if (shift === "A") shiftVal = 1;
   if (shift === "B") shiftVal = 2;
   if (shift === "C") shiftVal = 3;
   if (shift === "G") shiftVal = 1.5;
-  
   return dateObj.getTime() + (shiftVal * 100000);
 }
-
 // Logic to pull unreturned permits in the selected range
 function getRangeUnreturnedPermits() {
   // If dates aren't set yet, fallback to meta date
   const startD = rangeStartDate || meta.date;
   const endD = rangeEndDate || meta.date;
-  
   const startScore = getShiftTimelineScore(startD, rangeStartShift);
   const endScore = getShiftTimelineScore(endD, rangeEndShift);
-  
   if (startScore > endScore) return [];
-
   const targetOrdersMap = new Map();
-  
   // Find all permits that fall within the selected timeframe window
   permits.forEach(p => {
     const d = String(p.shiftDate || "").trim();
     const s = String(p.shift || "").trim();
     if (!d || !s) return;
-    
     const itemScore = getShiftTimelineScore(d, s);
     if (itemScore >= startScore && itemScore <= endScore) {
       if (!targetOrdersMap.has(p.orderNo) || itemScore > getShiftTimelineScore(targetOrdersMap.get(p.orderNo).shiftDate, targetOrdersMap.get(p.orderNo).shift)) {
@@ -247,16 +236,12 @@ function getRangeUnreturnedPermits() {
       }
     }
   });
-
   const unreturnedList = [];
-
   // Check the absolute latest status of those permits across the entire system database
   for (let [orderNo, targetPermit] of targetOrdersMap) {
     const history = permits.filter(p => String(p.orderNo).trim() === String(orderNo).trim());
-    
     let latestPermit = history[0];
     let maxScore = getShiftTimelineScore(latestPermit.shiftDate, latestPermit.shift);
-    
     for (let i = 1; i < history.length; i++) {
       const score = getShiftTimelineScore(history[i].shiftDate, history[i].shift);
       if (score > maxScore) {
@@ -264,7 +249,6 @@ function getRangeUnreturnedPermits() {
         latestPermit = history[i];
       }
     }
-    
     // If its absolute latest status across the database is NOT returned, it's unreturned!
     if (latestPermit && latestPermit.status !== "returned") {
       unreturnedList.push({
@@ -278,24 +262,19 @@ function getRangeUnreturnedPermits() {
       });
     }
   }
-  
   return unreturnedList;
 }
 // Logic to identify unreturned permits across a custom period
 function getRangeUnreturnedPermits() {
   const startScore = getShiftScore(rangeStartDate, rangeStartShift);
   const endScore = getShiftScore(rangeEndDate, rangeEndShift);
-  
   if (startScore > endScore) return [];
-
   // 1. Gather all unique order numbers matching our target date/shift timeframe
   const targetOrdersMap = new Map();
-  
   permits.forEach(p => {
     const d = String(p.shiftDate || "").trim();
     const s = String(p.shift || "").trim();
     if (!d || !s) return;
-    
     const itemScore = getShiftScore(d, s);
     if (itemScore >= startScore && itemScore <= endScore) {
       // Keep track of the most recent entry within this range for reference
@@ -304,18 +283,14 @@ function getRangeUnreturnedPermits() {
       }
     }
   });
-
   const unreturnedList = [];
-
   // 2. Check the absolute newest lifecycle entry of each permit in the entire system
   for (let [orderNo, targetPermit] of targetOrdersMap) {
     // Look up all occurrences of this permit across the complete system history
     const history = permits.filter(p => String(p.orderNo).trim() === String(orderNo).trim());
-    
     // Track chronologically the absolute latest status entry
     let latestPermit = history[0];
     let maxScore = getShiftScore(latestPermit.shiftDate, latestPermit.shift);
-    
     for (let i = 1; i < history.length; i++) {
       const score = getShiftScore(history[i].shiftDate, history[i].shift);
       if (score > maxScore) {
@@ -323,7 +298,6 @@ function getRangeUnreturnedPermits() {
         latestPermit = history[i];
       }
     }
-    
     // If the latest available record is not marked as 'returned', it's unreturned!
     if (latestPermit && latestPermit.status !== "returned") {
       unreturnedList.push({
@@ -338,7 +312,6 @@ function getRangeUnreturnedPermits() {
       });
     }
   }
-  
   return unreturnedList;
 }
 function extendUnaccountedPermit(id) {
@@ -462,14 +435,11 @@ function activePermits() {
 function render() {
   const app = document.getElementById("app");
   if (!API_URL) { app.innerHTML = renderConfig(); return; }
-
   // 1. SAVE SCROLL POSITIONS (Both global page window and the report table container)
   const savedWindowScrollTop = window.scrollY || document.documentElement.scrollTop;
-  
   const tableWrap = document.querySelector('.report-table-wrap');
   const savedTableScrollLeft = tableWrap ? tableWrap.scrollLeft : 0;
   const savedTableScrollTop  = tableWrap ? tableWrap.scrollTop : 0;
-
   // Rebuild the HTML content
   app.innerHTML = `
     ${renderHeader()}
@@ -483,7 +453,6 @@ function render() {
 </div>
     ${currentView==="list"?`<button class="fab" onclick="openAdd()">+</button>`:""}
   `;
-
   // 2. RESTORE TABLE SCROLL (Horizontal + Vertical inner scroll)
   if (savedTableScrollLeft > 0 || savedTableScrollTop > 0) {
     const newTableWrap = document.querySelector('.report-table-wrap');
@@ -492,7 +461,6 @@ function render() {
       if (savedTableScrollTop > 0)  newTableWrap.scrollTop  = savedTableScrollTop;
     }
   }
-
   // 3. RESTORE MAIN WINDOW SCROLL (Vertical page layout scroll)
   if (savedWindowScrollTop > 0) {
     window.scrollTo(0, savedWindowScrollTop);
@@ -812,13 +780,16 @@ function renderUnaccounted() {
   </div>`;
 }
 function renderRangeAuditView() {
-  // Set defaults to current shift date if they are empty strings
   if (!rangeStartDate) rangeStartDate = meta.date;
   if (!rangeEndDate) rangeEndDate = meta.date;
-
+  
+  // Get the unreturned list for the current view cards
   const rangeMissing = getRangeUnreturnedPermits();
   
-  // CRITICAL FIX: Wrapped entire HTML payload in a single container with the target ID
+  // Initialize search input value preservation
+  const searchInputEl = document.getElementById("range-search-order");
+  const searchQuery = searchInputEl ? searchInputEl.value.trim() : "";
+
   let html = `
    <div id="range-audit-container" style="background: #f1f5f9; padding-bottom: 20px;">
     <div id="range-audit-selectors" style="padding: 14px; background: white; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
@@ -826,7 +797,7 @@ function renderRangeAuditView() {
         🕒 Range Audit Tracker
       </h3>
       <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
-        Track unreturned permits across multiple shifts or days at once.
+        Track unreturned permits or search full historical lifecycles across shifts.
       </p>
       
       <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
@@ -843,7 +814,6 @@ function renderRangeAuditView() {
           </select>
         </div>
       </div>
-
       <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
         <div style="flex: 1; min-width: 140px;">
           <label style="font-size: 10px; font-weight:700; color:#64748b; display:block; margin-bottom:2px;">TO DATE (DD/MM/YYYY)</label>
@@ -858,51 +828,91 @@ function renderRangeAuditView() {
           </select>
         </div>
       </div>
+      
+      <div style="margin-bottom: 14px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
+        <label style="font-size: 10px; font-weight:800; color:#1e3a5f; display:block; margin-bottom:4px; text-transform:uppercase;">🔍 Live Order Number Search</label>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="range-search-order" placeholder="Enter Order No. (e.g. 450312)" value="${esc(searchQuery)}" style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+          <button onclick="applyRangeAudit()" style="background:#475569; color:white; border:none; padding:0 14px; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer;">Search</button>
+        </div>
+      </div>
 
       <button onclick="applyRangeAudit()" style="width:100%; background:#2563eb; color:white; border:none; padding:10px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">
-        🔍 Run Range Audit (${rangeMissing.length} Found)
+        🔍 Run Range Handover Audit (${rangeMissing.length} Unreturned)
       </button>
     </div>
     
     <div class="report-actions" style="padding: 0 14px; margin-bottom: 12px; display: flex; gap: 8px;">
-      <button class="btn-excel" onclick="exportRangeAuditExcel()" style="flex:1;">📥 Export Excel</button>
+      <button class="btn-excel" onclick="exportRangeAuditExcel()" style="flex:1;">📥 Export Unreturned</button>
+      <button class="btn-share" onclick="dumpFullRangeDataExcel()" style="flex:1; background: #7c3aed; color: white;">📊 Export Full Range (Excel)</button>
       <button id="range-capture-btn" onclick="captureRangeAuditImage()" style="background:#10b981; color:white; padding:11px; border-radius:10px; border:none; font-size:13px; font-weight:700; cursor:pointer; flex:1;">📸 Save Image</button>
     </div>
-
+    
     <div style="padding: 0 14px;">
-      <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color:#475569;">
-        Unreturned Permits from ${rangeStartDate} (${rangeStartShift}) to ${rangeEndDate} (${rangeEndShift}):
-      </h4>
   `;
 
-  if (rangeMissing.length === 0) {
-    html += `
-      <div class="card" style="text-align:center; padding: 20px; color:#94a3b8; background:white; border-radius:8px; border:1px dashed #cbd5e1;">
-        ✅ No unreturned permits found matching this timeframe window.
-      </div>
-    `;
+  // IF SEARCH IS ACTIVE: Display targeted historical timeline lifecycle track
+  if (searchQuery) {
+    const searchResults = permits.filter(p => String(p.orderNo || "").trim().includes(searchQuery));
+    
+    html += `<h4 style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color:#1e3a5f;">🔍 Lifecycle History Entries for "${esc(searchQuery)}" (${searchResults.length} logs found):</h4>`;
+    
+    if (searchResults.length === 0) {
+      html += `<div class="card" style="text-align:center; padding: 20px; color:#94a3b8; background:white; border-radius:8px; border:1px dashed #cbd5e1;">❌ No historical records match that order entry.</div>`;
+    } else {
+      // Sort matching search queries chronologically 
+      searchResults.sort((a,b) => getShiftScore(a.shiftDate, a.shift) - getShiftScore(b.shiftDate, b.shift));
+      
+      searchResults.forEach((p, index) => {
+        const returned = p.status === "returned";
+        const extended = p.status === "extended";
+        const stCls = returned ? "badge-green" : extended ? "badge-orange" : "badge-blue";
+        
+        html += `
+          <div class="card" style="background:white; padding:12px; margin-bottom:8px; border-radius:8px; border-left: 4px solid #3b82f6;">
+            <div class="card-top" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:11px; font-weight:bold; color:#64748b;">Log #${index + 1}</span>
+              <span class="card-order" style="font-weight:700; font-family:monospace;">${esc(p.orderNo)}</span>
+              <span class="badge ${stCls}" style="margin-left:auto;">${esc((p.status || "Issued").toUpperCase())}</span>
+            </div>
+            <div class="card-desc" style="font-size:12px; color:#0f172a;">${esc(p.jobDescription)}</div>
+            <div style="font-size:11px; color:#475569; display:flex; flex-direction:column; gap:4px; background:#f8fafc; padding:6px; border-radius:6px; margin-top:6px;">
+              <div>📅 <b>Shift:</b> ${esc(p.shiftDate)} — Shift ${esc(p.shift)}</div>
+              <div>👤 <b>Receiver:</b> ${esc(p.receiver)} ${p.contactNo ? `📞 ${esc(p.contactNo)}` : ""} | 📍 <b>Section:</b> ${esc(p.section)}</div>
+              <div>🔒 <b>Times:</b> Iso: ${esc(p.isolationTime || "—")} | Issue: ${esc(p.issueTime || "—")} | Ret: ${esc(p.returnedTime || "—")}</div>
+              <div style="font-size:10px; color:#94a3b8; text-align:right;">Logged by: ${esc(p.issuer || "System")}</div>
+            </div>
+          </div>`;
+      });
+    }
   } else {
-    rangeMissing.forEach(p => {
-      html += `
-        <div class="card" style="border-left: 4px solid #ef4444; background:white; padding:12px; margin-bottom:8px; border-radius:8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-          <div class="card-top" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <span class="card-order" style="font-weight:700; color:#1e293b;">${esc(p.orderNo)}</span>
-            <span class="badge badge-orange" style="background:#ffedf5; color:#b91c1c; padding:2px 6px; font-size:10px; border-radius:4px; font-weight:700; margin-left:auto;">${esc(p.lastStatus.toUpperCase())}</span>
-          </div>
-          <div class="card-desc" style="font-size:12px; color:#334155; margin-bottom:6px;">${esc(p.jobDescription)}</div>
-          <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
-            <span>👤 ${esc(p.receiver)}
-              ${p.contactNo ? ` <a href="tel:${esc(p.contactNo)}" style="color:#2563eb;text-decoration:none">📞 ${esc(p.contactNo)}</a>` : ''}
-              | 📍 ${esc(p.section)}
-            </span>
-            <span style="font-weight:700; color:#b91c1c;">Last Entry: ${esc(p.lastSeenDate)} (Shift ${esc(p.lastSeenShift)})</span>
-          </div>
-        </div>
-      `;
-    });
+    // DEFAULT VIEW: Show target unreturned window logs
+    html += `
+      <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color:#475569;">
+        Unreturned Handover Permits (${rangeStartDate} to ${rangeEndDate}):
+      </h4>
+    `;
+    if (rangeMissing.length === 0) {
+      html += `<div class="card" style="text-align:center; padding: 20px; color:#94a3b8; background:white; border-radius:8px; border:1px dashed #cbd5e1;">✅ No unreturned permits found matching this timeframe window.</div>`;
+    } else {
+      rangeMissing.forEach(p => {
+        html += `
+          <div class="card" style="border-left: 4px solid #ef4444; background:white; padding:12px; margin-bottom:8px; border-radius:8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div class="card-top" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span class="card-order" style="font-weight:700; color:#1e293b;">${esc(p.orderNo)}</span>
+              <span class="badge badge-orange" style="background:#ffedf5; color:#b91c1c; padding:2px 6px; font-size:10px; border-radius:4px; font-weight:700; margin-left:auto;">${esc(p.lastStatus.toUpperCase())}</span>
+            </div>
+            <div class="card-desc" style="font-size:12px; color:#334155; margin-bottom:6px;">${esc(p.jobDescription)}</div>
+            <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
+              <span>👤 ${esc(p.receiver)} ${p.contactNo ? ` <a href="tel:${esc(p.contactNo)}" style="color:#2563eb;text-decoration:none">📞 ${esc(p.contactNo)}</a>` : ''} | 📍 ${esc(p.section)}</span>
+              <span style="font-weight:700; color:#b91c1c;">Last Entry: ${esc(p.lastSeenDate)} (Shift ${esc(p.lastSeenShift)})</span>
+            </div>
+          </div>`;
+      });
+    }
   }
-
-  html += `</div></div>`; // Close the main range-audit-container wrapper div
+  
+  html += `</div></div>`;
   return html;
 }
 
@@ -922,6 +932,109 @@ function applyRangeAudit() {
 // ══════════════════════════════════════
 //  EXPORT & SHARE
 // ══════════════════════════════════════
+function dumpFullRangeDataExcel() {
+  const startScore = getShiftScore(rangeStartDate, rangeStartShift);
+  const endScore = getShiftScore(rangeEndDate, rangeEndShift);
+  
+  if (startScore > endScore) {
+    alert("Invalid Date Range Selection Window!");
+    return;
+  }
+
+  // Filter full matching logs history matrix
+  const rangePermits = permits.filter(p => {
+    const d = String(p.shiftDate || "").trim();
+    const s = String(p.shift || "").trim();
+    if (!d || !s) return false;
+    const itemScore = getShiftScore(d, s);
+    return itemScore >= startScore && itemScore <= endScore;
+  });
+
+  if (rangePermits.length === 0) {
+    alert("No records found within this timeframe.");
+    return;
+  }
+
+  // Sort chronologically
+  rangePermits.sort((a, b) => getShiftScore(a.shiftDate, a.shift) - getShiftScore(b.shiftDate, b.shift));
+
+  // Build clean native Excel HTML structures with proper headers style
+  let excelTemplate = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        th { background-color: #1e3a5f; color: #ffffff; font-weight: bold; border: 0.5pt solid #cbd5e1; padding: 6px; }
+        td { border: 0.5pt solid #cbd5e1; padding: 4px; font-family: Arial, sans-serif; font-size: 10pt; }
+        .title-hdr { font-size: 14pt; font-weight: bold; color: #1e3a5f; text-align: left; }
+      </style>
+    </head>
+    <body>
+      <table>
+        <tr><td colspan="15" class="title-hdr">ARS OPERATIONS FULL DATA DUMP REPORT</td></tr>
+        <tr><td colspan="15"><b>Timeframe Window Range:</b> ${rangeStartDate} (${rangeStartShift}) to ${rangeEndDate} (${rangeEndShift})</td></tr>
+        <tr><td colspan="15"><b>Total Extracted Records:</b> ${rangePermits.length} logs</td></tr>
+        <tr></tr>
+        <thead>
+          <tr>
+            <th>System ID</th>
+            <th>Shift Date</th>
+            <th>Shift</th>
+            <th>Order No</th>
+            <th>Type</th>
+            <th>Section</th>
+            <th>Job Description</th>
+            <th>Receiver</th>
+            <th>Contact No</th>
+            <th>Isolation Time</th>
+            <th>Issue Time</th>
+            <th>Extended Time</th>
+            <th>Returned Time</th>
+            <th>Permit Structure</th>
+            <th>Status</th>
+            <th>Issued By</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  rangePermits.forEach(p => {
+    excelTemplate += `
+      <tr>
+        <td>${p.id || ""}</td>
+        <td>${p.shiftDate || ""}</td>
+        <td style="text-align:center;">${p.shift || ""}</td>
+        <td style="font-family:monospace; mso-number-format:'\\@';">${p.orderNo || ""}</td>
+        <td>${classifyOrder(p.orderNo)}</td>
+        <td>${p.section || ""}</td>
+        <td>${esc(p.jobDescription || "")}</td>
+        <td>${esc(p.receiver || "")}</td>
+        <td style="mso-number-format:'\\@';">${p.contactNo || ""}</td>
+        <td>${p.isolationTime || "—"}</td>
+        <td>${p.issueTime || "—"}</td>
+        <td>${p.extendedTime || "—"}</td>
+        <td>${p.returnedTime || "—"}</td>
+        <td>${(p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated"}</td>
+        <td>${p.status || "Issued"}</td>
+        <td>${esc(p.issuer || "")}</td>
+      </tr>
+    `;
+  });
+
+  excelTemplate += `</tbody></table></body></html>`;
+
+  const blob = new Blob([excelTemplate], { type: "application/vnd.ms-excel;charset=utf-8;" });
+  const downloadUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = `Full_Excel_Dump_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.xls`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(downloadUrl);
+}
+
+
 // Function to export Range Audit cards data to a downloadable CSV/Excel file structure
 function exportRangeAuditExcel() {
   const rangeMissing = getRangeUnreturnedPermits();
@@ -929,7 +1042,6 @@ function exportRangeAuditExcel() {
     alert("No unreturned range data to export.");
     return;
   }
-
   const headers = ["Order No", "Job Description", "Section", "Receiver","Contact No", "Last Seen Date", "Last Seen Shift", "Last Status"];
   const rows = rangeMissing.map(p => [
     `"${String(p.orderNo || "").replace(/"/g, '""')}"`,
@@ -941,10 +1053,8 @@ function exportRangeAuditExcel() {
     `"${String(p.lastSeenShift || "").replace(/"/g, '""')}"`,
     `"${String(p.lastStatus || "").replace(/"/g, '""')}"`
   ]);
-
   const csvContent = "data:text/csv;charset=utf-8," 
     + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-  
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
@@ -953,53 +1063,42 @@ function exportRangeAuditExcel() {
   link.click();
   document.body.removeChild(link);
 }
-
 async function captureRangeAuditImage() {
     // 1. Target the main Range-Audit container wrapper specifically
     const reportContainer = document.getElementById("range-audit-container");
-    
     // Target the specific wrapper where your button sits inside the range audit container
     const btn = document.getElementById('range-capture-btn');
     const actions = btn ? btn.parentElement : null;
-    
     // NEW: Target the date/shift selectors block element container
     const selectors = document.getElementById('range-audit-selectors');
-    
     if (!reportContainer) {
         alert("Range Audit components not found.");
         return;
     }
-
     const originalText = btn ? btn.innerText : "";
     if (btn) {
         btn.innerText = "⏳ Capturing View...";
         btn.disabled = true;
     }
-
     // Save original visibility states for layout restoration
     const oldActionsDisplay = actions ? actions.style.display : "";
     const oldSelectorsDisplay = selectors ? selectors.style.display : "";
-
     try {
         // Hide both the action buttons AND the date picker inputs panel
         if (actions) actions.style.display = "none";
         if (selectors) selectors.style.display = "none";
-
         // Capture the remaining parts of the range audit wrapper (the cards list)
         const canvas = await html2canvas(reportContainer, {
             scale: 2, // Keeps text looking sharp
             backgroundColor: '#f1f5f9', // Matches app background
             useCORS: true
         });
-
         // Trigger file download using the preview state variables
         const imageUri = canvas.toDataURL("image/png");
-        
         // Grab values dynamically from your range state variables
         const rStart = (typeof rangeStartDate !== 'undefined') ? rangeStartDate : 'Start';
         const rEnd = (typeof rangeEndDate !== 'undefined') ? rangeEndDate : 'End';
         const fileName = `Range_Audit_${rStart.replace(/\//g, "-")}_to_${rEnd.replace(/\//g, "-")}.png`;
-
         // Check specifically for iPhone/iPad environments
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         if (isIOS) {
@@ -1047,7 +1146,6 @@ async function captureRangeAuditImage() {
         }
     }
 }
-
 async function captureAuditImage() {
     // 1. Target the elements inside the renderUnaccounted / Audit structure
     const reportContainer = document.querySelector('.report'); 
@@ -1728,18 +1826,14 @@ async function savePermit(isEdit) {
 async function confirmDelete() {
   // 1. Prompt for password authentication
   const password = prompt("Enter password to delete this permit:");
-  
   if (password === null) return; // User clicked Cancel
-  
   // 2. Set your desired password here (e.g., "ARS2026")
   if (password !== "sherlockholmes1") {
     alert("❌ Incorrect password. Access denied. Contact admin");
     return;
   }
-
   // 3. Final confirmation before removing from database
   if (!confirm("Are you absolutely sure you want to delete this permit entry?")) return;
-  
   try { 
     await api("delete",{id:editingPermit.id}); 
     removeModal(); 
@@ -1792,7 +1886,6 @@ function openSetup() {
         </select>
       </div>
       <div class="field"><label>Your Name (Issuer)</label><input id="s-issuer" placeholder="e.g. Omkar" value="${esc(meta.issuer||"")}"></div>
-      
       <div style="background-color: #eff6ff !important; border: 1px solid #bfdbfe !important; border-radius: 8px !important; padding: 12px !important; margin-top: 14px !important; margin-bottom: 14px !important; display: block !important; clear: both !important;">
         <label style="font-weight:700 !important; font-size:11px !important; color:#1e3a5f !important; display:block !important; margin-bottom:4px !important;">YOUR TRUST SHARE KEY</label>
         <div style="display:flex !important; gap:8px !important; align-items:center !important;">
@@ -1800,7 +1893,6 @@ function openSetup() {
           <button type="button" style="padding:6px 10px !important; height:32px !important; margin:0 !important; cursor:pointer !important; background-color:#e2e8f0 !important; color:#1e293b !important; border:1px solid #cbd5e1 !important; border-radius:6px !important; font-size:12px !important;" onclick="navigator.clipboard.writeText('${DEVICE_TOKEN}'); alert('Copied to clipboard!');">📋 Copy</button>
         </div>
       </div>
-      
       <div class="field" style="margin-top:14px !important; margin-bottom:16px !important;">
         <label>Link Colleague Device Signature</label>
         <div style="display:flex !important; gap:8px !important;">
@@ -1808,7 +1900,6 @@ function openSetup() {
           <button type="button" class="btn-primary" style="padding:0 14px !important; width:auto !important; font-size:13px !important; white-space:nowrap !important; border-radius:10px !important; margin:0 !important;" onclick="linkDeviceHandshake()">Link Device</button>
         </div>
       </div>
-      
       <button class="btn-primary" onclick="saveSetup()">Save & Continue</button>
       <div style="margin-top:16px !important;padding-top:16px !important;border-top:1px solid #f1f5f9 !important;clear: both !important;">
         <button onclick="resetUrl()" style="background:none !important;border:none !important;color:#94a3b8 !important;font-size:12px !important;cursor:pointer !important;">Change API URL</button>
@@ -1861,34 +1952,25 @@ function switchView(v) { currentView=v; render(); }
 // ══════════════════════════════════════
 async function doRefresh(isAuto = false) {
   if (!API_URL) return;
-  
   // 1. Skip automatic background syncing if a form/modal is currently open
   if (isAuto && document.getElementById("modal-overlay")) return;
-  
   syncing = true;
-  
   // 2. Quietly update just the sync button text instead of wiping the whole page layout
   const syncBtn = document.querySelector(".header-actions button");
   if (syncBtn) syncBtn.textContent = "⏳";
-  
   try { 
     await loadAll(); 
   } catch(err) { 
     console.error(err); 
   }
-  
   syncing = false;
-  
   // 3. Render once at the end to smoothly display the fresh data
   render();
 }
-
 async function init() {
   render(); 
   if (!API_URL) return;
-  
   await doRefresh(false); // Initial manual load
-  
   if (refreshTimer) clearInterval(refreshTimer);
   // Pass true to indicate this is an automated background refresh
   refreshTimer = setInterval(() => doRefresh(true), 20000);
