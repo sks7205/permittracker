@@ -125,6 +125,21 @@
   th { background: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 10px; padding: 8px 6px; border: 1px solid #e2e8f0; white-space: nowrap; }
   td { padding: 8px 6px; border: 1px solid #e2e8f0; vertical-align: top; }
   tr:nth-child(even) td { background: #f8fafc; }
+  /* Force clear black visibility for elements inside Report, Audit, and Range Audit tables */
+table, th, td, .card, .card-order, .card-desc {
+  color: #000000 !important;
+}
+
+/* Ensure data cell typography in even alternating row backgrounds is also black */
+tr:nth-child(even) td {
+  background: #f8fafc;
+  color: #000000 !important;
+}
+
+/* Ensure labels inside the Range Audit container view remain legible and black */
+.range-audit-container, .range-audit-container p, .range-audit-containerspan {
+  color: #000000 !important;
+}
   .report-hint { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 10px; }
   .loading { text-align: center; padding: 80px 20px; color: #64748b; }
   .spinner { font-size: 36px; animation: spin 1s linear infinite; display: inline-block; }
@@ -154,6 +169,16 @@
 // ══════════════════════════════════════
 let API_URL = localStorage.getItem("ars2_api_url") || "";
 let permits = [];
+
+// ─── ADDED FOR GLOBAL TRUST REGISTRY LAYER ───
+if (!localStorage.getItem("DEVICE_TOKEN")) {
+  const arr = new Uint8Array(16);
+  window.crypto.getRandomValues(arr);
+  const token = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+  localStorage.setItem("DEVICE_TOKEN", "DEV-" + token);
+}
+const DEVICE_TOKEN = localStorage.getItem("DEVICE_TOKEN");
+// ─────────────────────────────────────────────
 // meta is stored per-phone in localStorage — never overwritten by sheet
 function loadMeta() {
   try {
@@ -169,9 +194,153 @@ let editingPermit = null;
 let syncing = false;
 let lastSync = null;
 let refreshTimer = null;
+// Keep your existing variables exactly as they are, just add these below them:
+let rangeStartDate = ""; // Will default to today's date automatically
+let rangeStartShift = "A";
+let rangeEndDate = "";   // Will default to today's date automatically
+let rangeEndShift = "C";
 // ══════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════
+// Helper to turn DD/MM/YYYY and Shift into a chronological comparison number
+function getShiftScore(dateStr, shift) {
+  if (!dateStr) return 0;
+  const parts = dateStr.split("/");
+  if (parts.length !== 3) return 0;
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const year = parseInt(parts[2], 10);
+  const dateObj = new Date(year, month, day);
+  
+  let shiftVal = 0;
+  if (shift === "A") shiftVal = 1;
+  if (shift === "B") shiftVal = 2;
+  if (shift === "C") shiftVal = 3;
+  if (shift === "G") shiftVal = 1.5;
+  
+  return dateObj.getTime() + (shiftVal * 100000);
+}
+
+// Logic to pull unreturned permits in the selected range
+function getRangeUnreturnedPermits() {
+  // If dates aren't set yet, fallback to meta date
+  const startD = rangeStartDate || meta.date;
+  const endD = rangeEndDate || meta.date;
+  
+  const startScore = getShiftTimelineScore(startD, rangeStartShift);
+  const endScore = getShiftTimelineScore(endD, rangeEndShift);
+  
+  if (startScore > endScore) return [];
+
+  const targetOrdersMap = new Map();
+  
+  // Find all permits that fall within the selected timeframe window
+  permits.forEach(p => {
+    const d = String(p.shiftDate || "").trim();
+    const s = String(p.shift || "").trim();
+    if (!d || !s) return;
+    
+    const itemScore = getShiftTimelineScore(d, s);
+    if (itemScore >= startScore && itemScore <= endScore) {
+      if (!targetOrdersMap.has(p.orderNo) || itemScore > getShiftTimelineScore(targetOrdersMap.get(p.orderNo).shiftDate, targetOrdersMap.get(p.orderNo).shift)) {
+        targetOrdersMap.set(p.orderNo, p);
+      }
+    }
+  });
+
+  const unreturnedList = [];
+
+  // Check the absolute latest status of those permits across the entire system database
+  for (let [orderNo, targetPermit] of targetOrdersMap) {
+    const history = permits.filter(p => String(p.orderNo).trim() === String(orderNo).trim());
+    
+    let latestPermit = history[0];
+    let maxScore = getShiftTimelineScore(latestPermit.shiftDate, latestPermit.shift);
+    
+    for (let i = 1; i < history.length; i++) {
+      const score = getShiftTimelineScore(history[i].shiftDate, history[i].shift);
+      if (score > maxScore) {
+        maxScore = score;
+        latestPermit = history[i];
+      }
+    }
+    
+    // If its absolute latest status across the database is NOT returned, it's unreturned!
+    if (latestPermit && latestPermit.status !== "returned") {
+      unreturnedList.push({
+        orderNo: orderNo,
+        jobDescription: latestPermit.jobDescription || targetPermit.jobDescription,
+        section: latestPermit.section || targetPermit.section,
+        receiver: latestPermit.receiver || targetPermit.receiver,
+        lastSeenDate: latestPermit.shiftDate,
+        lastSeenShift: latestPermit.shift,
+        lastStatus: latestPermit.status || "Issued"
+      });
+    }
+  }
+  
+  return unreturnedList;
+}
+// Logic to identify unreturned permits across a custom period
+function getRangeUnreturnedPermits() {
+  const startScore = getShiftScore(rangeStartDate, rangeStartShift);
+  const endScore = getShiftScore(rangeEndDate, rangeEndShift);
+  
+  if (startScore > endScore) return [];
+
+  // 1. Gather all unique order numbers matching our target date/shift timeframe
+  const targetOrdersMap = new Map();
+  
+  permits.forEach(p => {
+    const d = String(p.shiftDate || "").trim();
+    const s = String(p.shift || "").trim();
+    if (!d || !s) return;
+    
+    const itemScore = getShiftScore(d, s);
+    if (itemScore >= startScore && itemScore <= endScore) {
+      // Keep track of the most recent entry within this range for reference
+      if (!targetOrdersMap.has(p.orderNo) || itemScore > getShiftScore(targetOrdersMap.get(p.orderNo).shiftDate, targetOrdersMap.get(p.orderNo).shift)) {
+        targetOrdersMap.set(p.orderNo, p);
+      }
+    }
+  });
+
+  const unreturnedList = [];
+
+  // 2. Check the absolute newest lifecycle entry of each permit in the entire system
+  for (let [orderNo, targetPermit] of targetOrdersMap) {
+    // Look up all occurrences of this permit across the complete system history
+    const history = permits.filter(p => String(p.orderNo).trim() === String(orderNo).trim());
+    
+    // Track chronologically the absolute latest status entry
+    let latestPermit = history[0];
+    let maxScore = getShiftScore(latestPermit.shiftDate, latestPermit.shift);
+    
+    for (let i = 1; i < history.length; i++) {
+      const score = getShiftScore(history[i].shiftDate, history[i].shift);
+      if (score > maxScore) {
+        maxScore = score;
+        latestPermit = history[i];
+      }
+    }
+    
+    // If the latest available record is not marked as 'returned', it's unreturned!
+    if (latestPermit && latestPermit.status !== "returned") {
+      unreturnedList.push({
+        orderNo: orderNo,
+        jobDescription: latestPermit.jobDescription || targetPermit.jobDescription,
+        section: latestPermit.section || targetPermit.section,
+        receiver: latestPermit.receiver || targetPermit.receiver,
+        contactNo:latestPermit.contactNo || targetPermit.contactNo,
+        lastSeenDate: latestPermit.shiftDate,
+        lastSeenShift: latestPermit.shift,
+        lastStatus: latestPermit.status || "Issued"
+      });
+    }
+  }
+  
+  return unreturnedList;
+}
 function extendUnaccountedPermit(id) {
   const oldPermit = permits.find(p => String(p.id) === String(id));
   if (!oldPermit) return;
@@ -260,8 +429,9 @@ function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;"
 // ══════════════════════════════════════
 async function api(action, body={}) {
   if (!API_URL) throw new Error("No API URL");
+  // Injected deviceToken safely into the destructuring payload
   const res = await fetch(API_URL, {
-    method:"POST", body:JSON.stringify({action,...body}), headers:{"Content-Type":"text/plain"}
+    method:"POST", body:JSON.stringify({action, deviceToken: DEVICE_TOKEN, ...body}), headers:{"Content-Type":"text/plain"}
   });
   const data = await res.json();
   if (data.error) throw new Error(data.error);
@@ -306,10 +476,11 @@ function render() {
     ${renderSyncBar()}
     ${!meta.issuer?`<div class="setup-banner" onclick="openSetup()">⚠️ Tap to set your name and shift details</div>`:""}
     <div id="main-content">
-      ${currentView==="list" ? renderList() : 
-        currentView==="report" ? renderReport() : 
-        renderUnaccounted()}
-    </div>
+  ${currentView === "list" ? renderList() : 
+    currentView === "report" ? renderReport() : 
+    currentView === "range_audit" ? renderRangeAuditView() :
+    renderUnaccounted()}
+</div>
     ${currentView==="list"?`<button class="fab" onclick="openAdd()">+</button>`:""}
   `;
 
@@ -343,10 +514,11 @@ function renderHeader() {
       </div>
     </div>
     <div class="tabs">
-      <button class="tab ${currentView==="list"?"active":""}" onclick="switchView('list')">Permits (${activePermits().length})</button>
-      <button class="tab ${currentView==="report"?"active":""}" onclick="switchView('report')">📋 Report</button>
-      <button class="tab ${currentView==="unaccounted"?"active":""}" onclick="switchView('unaccounted')">${alertIcon} Audit (${unaccountedCount})</button>
-    </div>
+  <button class="tab ${currentView==='list'?'active':''}" onclick="switchView('list')">Permits (${activePermits().length})</button>
+  <button class="tab ${currentView==='report'?'active':''}" onclick="switchView('report')">📋 Report</button>
+  <button class="tab ${currentView==='unaccounted'?'active':''}" onclick="switchView('unaccounted')">${alertIcon} Audit (${unaccountedCount})</button>
+  <button class="tab ${currentView==='range_audit'?'active':''}" onclick="switchView('range_audit')">🕒 Range Audit</button>
+</div>
   </div>`;
 }
 function renderSyncBar() {
@@ -639,9 +811,243 @@ function renderUnaccounted() {
     <p class="report-hint">Tap any missing permit to pull it into your shift as "Extended"</p>
   </div>`;
 }
+function renderRangeAuditView() {
+  // Set defaults to current shift date if they are empty strings
+  if (!rangeStartDate) rangeStartDate = meta.date;
+  if (!rangeEndDate) rangeEndDate = meta.date;
+
+  const rangeMissing = getRangeUnreturnedPermits();
+  
+  // CRITICAL FIX: Wrapped entire HTML payload in a single container with the target ID
+  let html = `
+   <div id="range-audit-container" style="background: #f1f5f9; padding-bottom: 20px;">
+    <div id="range-audit-selectors" style="padding: 14px; background: white; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
+      <h3 style="font-size: 14px; font-weight: 800; color: #1e3a5f; margin-bottom: 4px; text-transform: uppercase;">
+        🕒 Range Audit Tracker
+      </h3>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
+        Track unreturned permits across multiple shifts or days at once.
+      </p>
+      
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+        <div style="flex: 1; min-width: 140px;">
+          <label style="font-size: 10px; font-weight:700; color:#64748b; display:block; margin-bottom:2px;">FROM DATE (DD/MM/YYYY)</label>
+          <input type="text" id="range-start-date" value="${esc(rangeStartDate)}" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+        </div>
+        <div style="width: 80px;">
+          <label style="font-size: 10px; font-weight:700; color:#64748b; display:block; margin-bottom:2px;">SHIFT</label>
+          <select id="range-start-shift" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+            <option value="A" ${rangeStartShift==="A"?'selected':''}>A</option>
+            <option value="B" ${rangeStartShift==="B"?'selected':''}>B</option>
+            <option value="C" ${rangeStartShift==="C"?'selected':''}>C</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
+        <div style="flex: 1; min-width: 140px;">
+          <label style="font-size: 10px; font-weight:700; color:#64748b; display:block; margin-bottom:2px;">TO DATE (DD/MM/YYYY)</label>
+          <input type="text" id="range-end-date" value="${esc(rangeEndDate)}" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+        </div>
+        <div style="width: 80px;">
+          <label style="font-size: 10px; font-weight:700; color:#64748b; display:block; margin-bottom:2px;">SHIFT</label>
+          <select id="range-end-shift" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+            <option value="A" ${rangeEndShift==="A"?'selected':''}>A</option>
+            <option value="B" ${rangeEndShift==="B"?'selected':''}>B</option>
+            <option value="C" ${rangeEndShift==="C"?'selected':''}>C</option>
+          </select>
+        </div>
+      </div>
+
+      <button onclick="applyRangeAudit()" style="width:100%; background:#2563eb; color:white; border:none; padding:10px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">
+        🔍 Run Range Audit (${rangeMissing.length} Found)
+      </button>
+    </div>
+    
+    <div class="report-actions" style="padding: 0 14px; margin-bottom: 12px; display: flex; gap: 8px;">
+      <button class="btn-excel" onclick="exportRangeAuditExcel()" style="flex:1;">📥 Export Excel</button>
+      <button id="range-capture-btn" onclick="captureRangeAuditImage()" style="background:#10b981; color:white; padding:11px; border-radius:10px; border:none; font-size:13px; font-weight:700; cursor:pointer; flex:1;">📸 Save Image</button>
+    </div>
+
+    <div style="padding: 0 14px;">
+      <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color:#475569;">
+        Unreturned Permits from ${rangeStartDate} (${rangeStartShift}) to ${rangeEndDate} (${rangeEndShift}):
+      </h4>
+  `;
+
+  if (rangeMissing.length === 0) {
+    html += `
+      <div class="card" style="text-align:center; padding: 20px; color:#94a3b8; background:white; border-radius:8px; border:1px dashed #cbd5e1;">
+        ✅ No unreturned permits found matching this timeframe window.
+      </div>
+    `;
+  } else {
+    rangeMissing.forEach(p => {
+      html += `
+        <div class="card" style="border-left: 4px solid #ef4444; background:white; padding:12px; margin-bottom:8px; border-radius:8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <div class="card-top" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span class="card-order" style="font-weight:700; color:#1e293b;">${esc(p.orderNo)}</span>
+            <span class="badge badge-orange" style="background:#ffedf5; color:#b91c1c; padding:2px 6px; font-size:10px; border-radius:4px; font-weight:700; margin-left:auto;">${esc(p.lastStatus.toUpperCase())}</span>
+          </div>
+          <div class="card-desc" style="font-size:12px; color:#334155; margin-bottom:6px;">${esc(p.jobDescription)}</div>
+          <div style="font-size:11px; color:#64748b; display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
+            <span>👤 ${esc(p.receiver)}
+              ${p.contactNo ? ` <a href="tel:${esc(p.contactNo)}" style="color:#2563eb;text-decoration:none">📞 ${esc(p.contactNo)}</a>` : ''}
+              | 📍 ${esc(p.section)}
+            </span>
+            <span style="font-weight:700; color:#b91c1c;">Last Entry: ${esc(p.lastSeenDate)} (Shift ${esc(p.lastSeenShift)})</span>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  html += `</div></div>`; // Close the main range-audit-container wrapper div
+  return html;
+}
+
+function applyRangeAudit() {
+  const startD = document.getElementById("range-start-date");
+  const startS = document.getElementById("range-start-shift");
+  const endD = document.getElementById("range-end-date");
+  const endS = document.getElementById("range-end-shift");
+  
+  if (startD) rangeStartDate = startD.value.trim();
+  if (startS) rangeStartShift = startS.value;
+  if (endD) rangeEndDate = endD.value.trim();
+  if (endS) rangeEndShift = endS.value;
+  
+  render();
+}
 // ══════════════════════════════════════
 //  EXPORT & SHARE
 // ══════════════════════════════════════
+// Function to export Range Audit cards data to a downloadable CSV/Excel file structure
+function exportRangeAuditExcel() {
+  const rangeMissing = getRangeUnreturnedPermits();
+  if (rangeMissing.length === 0) {
+    alert("No unreturned range data to export.");
+    return;
+  }
+
+  const headers = ["Order No", "Job Description", "Section", "Receiver","Contact No", "Last Seen Date", "Last Seen Shift", "Last Status"];
+  const rows = rangeMissing.map(p => [
+    `"${String(p.orderNo || "").replace(/"/g, '""')}"`,
+    `"${String(p.jobDescription || "").replace(/"/g, '""')}"`,
+    `"${String(p.section || "").replace(/"/g, '""')}"`,
+    `"${String(p.receiver || "").replace(/"/g, '""')}"`,
+    `"${String(p.contactNo || "").replace(/"/g, '""')}"`,
+    `"${String(p.lastSeenDate || "").replace(/"/g, '""')}"`,
+    `"${String(p.lastSeenShift || "").replace(/"/g, '""')}"`,
+    `"${String(p.lastStatus || "").replace(/"/g, '""')}"`
+  ]);
+
+  const csvContent = "data:text/csv;charset=utf-8," 
+    + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+  
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `Range_Audit_Report_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+async function captureRangeAuditImage() {
+    // 1. Target the main Range-Audit container wrapper specifically
+    const reportContainer = document.getElementById("range-audit-container");
+    
+    // Target the specific wrapper where your button sits inside the range audit container
+    const btn = document.getElementById('range-capture-btn');
+    const actions = btn ? btn.parentElement : null;
+    
+    // NEW: Target the date/shift selectors block element container
+    const selectors = document.getElementById('range-audit-selectors');
+    
+    if (!reportContainer) {
+        alert("Range Audit components not found.");
+        return;
+    }
+
+    const originalText = btn ? btn.innerText : "";
+    if (btn) {
+        btn.innerText = "⏳ Capturing View...";
+        btn.disabled = true;
+    }
+
+    // Save original visibility states for layout restoration
+    const oldActionsDisplay = actions ? actions.style.display : "";
+    const oldSelectorsDisplay = selectors ? selectors.style.display : "";
+
+    try {
+        // Hide both the action buttons AND the date picker inputs panel
+        if (actions) actions.style.display = "none";
+        if (selectors) selectors.style.display = "none";
+
+        // Capture the remaining parts of the range audit wrapper (the cards list)
+        const canvas = await html2canvas(reportContainer, {
+            scale: 2, // Keeps text looking sharp
+            backgroundColor: '#f1f5f9', // Matches app background
+            useCORS: true
+        });
+
+        // Trigger file download using the preview state variables
+        const imageUri = canvas.toDataURL("image/png");
+        
+        // Grab values dynamically from your range state variables
+        const rStart = (typeof rangeStartDate !== 'undefined') ? rangeStartDate : 'Start';
+        const rEnd = (typeof rangeEndDate !== 'undefined') ? rangeEndDate : 'End';
+        const fileName = `Range_Audit_${rStart.replace(/\//g, "-")}_to_${rEnd.replace(/\//g, "-")}.png`;
+
+        // Check specifically for iPhone/iPad environments
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if (isIOS) {
+            const newWindow = window.open();
+            if (newWindow) {
+                newWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Range Audit Preview</title>
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <style>
+                                body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; }
+                                img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+                                .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 14px; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div>
+                            <img src="${imageUri}" alt="Range Audit Report" />
+                        </body>
+                    </html>
+                `);
+                newWindow.document.close();
+            } else {
+                alert("Pop-up blocked! Please allow pop-ups for this site to view/save the report image.");
+            }
+        } else {
+            const downloadLink = document.createElement("a");
+            downloadLink.download = fileName;
+            downloadLink.href = imageUri;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Capture failed. Try taking a normal screenshot.");
+    } finally {
+        // Restore all functional interface parts back to visible states on layout
+        if (actions) actions.style.display = oldActionsDisplay;
+        if (selectors) selectors.style.display = oldSelectorsDisplay;
+        if (btn) {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
+}
+
 async function captureAuditImage() {
     // 1. Target the elements inside the renderUnaccounted / Audit structure
     const reportContainer = document.querySelector('.report'); 
@@ -1376,21 +1782,56 @@ function openEdit(id) {
 function openSetup() {
   showModal(`
     <div class="modal-header"><span class="modal-title">Shift Setup</span><button class="close-btn" onclick="removeModal()">×</button></div>
-    <div class="modal-body">
+    <div class="modal-body" style="background-color: #ffffff !important; color: #1e293b !important;">
       <p style="font-size:13px;color:#64748b;margin-bottom:16px">Each phone sets its own issuer name. Date and shift are shared.</p>
       <div class="field"><label>Date</label><input id="s-date" type="date" value="${meta.date.split("/").reverse().join("-")}"></div>
       <div class="field">
-  <label>Shift</label>
-  <select id="s-shift">
-    ${["", "A", "B", "C", "G"].map(s => `<option value="${s}" ${meta.shift === s ? "selected" : ""}>${s === "" ? "— All Shifts (Blank) —" : s}</option>`).join("")}
-  </select>
-</div>
+        <label>Shift</label>
+        <select id="s-shift">
+          ${["", "A", "B", "C", "G"].map(s => `<option value="${s}" ${meta.shift === s ? "selected" : ""}>${s === "" ? "— All Shifts (Blank) —" : s}</option>`).join("")}
+        </select>
+      </div>
       <div class="field"><label>Your Name (Issuer)</label><input id="s-issuer" placeholder="e.g. Omkar" value="${esc(meta.issuer||"")}"></div>
+      
+      <div style="background-color: #eff6ff !important; border: 1px solid #bfdbfe !important; border-radius: 8px !important; padding: 12px !important; margin-top: 14px !important; margin-bottom: 14px !important; display: block !important; clear: both !important;">
+        <label style="font-weight:700 !important; font-size:11px !important; color:#1e3a5f !important; display:block !important; margin-bottom:4px !important;">YOUR TRUST SHARE KEY</label>
+        <div style="display:flex !important; gap:8px !important; align-items:center !important;">
+          <input type="text" readonly value="${DEVICE_TOKEN}" style="flex:1 !important; padding:6px !important; font-size:13px !important; font-family:monospace !important; background-color:#ffffff !important; border:1px solid #cbd5e1 !important; border-radius:6px !important; color:#000000 !important;" id="trust-key-field">
+          <button type="button" style="padding:6px 10px !important; height:32px !important; margin:0 !important; cursor:pointer !important; background-color:#e2e8f0 !important; color:#1e293b !important; border:1px solid #cbd5e1 !important; border-radius:6px !important; font-size:12px !important;" onclick="navigator.clipboard.writeText('${DEVICE_TOKEN}'); alert('Copied to clipboard!');">📋 Copy</button>
+        </div>
+      </div>
+      
+      <div class="field" style="margin-top:14px !important; margin-bottom:16px !important;">
+        <label>Link Colleague Device Signature</label>
+        <div style="display:flex !important; gap:8px !important;">
+          <input id="s-peer-token" type="text" placeholder="Paste peer's DEV- token key" style="font-size:14px !important; padding:10px !important; flex: 1 !important;">
+          <button type="button" class="btn-primary" style="padding:0 14px !important; width:auto !important; font-size:13px !important; white-space:nowrap !important; border-radius:10px !important; margin:0 !important;" onclick="linkDeviceHandshake()">Link Device</button>
+        </div>
+      </div>
+      
       <button class="btn-primary" onclick="saveSetup()">Save & Continue</button>
-      <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9">
-        <button onclick="resetUrl()" style="background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer">Change API URL</button>
+      <div style="margin-top:16px !important;padding-top:16px !important;border-top:1px solid #f1f5f9 !important;clear: both !important;">
+        <button onclick="resetUrl()" style="background:none !important;border:none !important;color:#94a3b8 !important;font-size:12px !important;cursor:pointer !important;">Change API URL</button>
       </div>
     </div>`);
+}
+async function linkDeviceHandshake() {
+  const peerToken = document.getElementById("s-peer-token").value.trim();
+  if (!peerToken || !peerToken.startsWith("DEV-")) {
+    alert("Please enter a valid colleague device token (starting with 'DEV-')");
+    return;
+  }
+  if (peerToken === DEVICE_TOKEN) {
+    alert("You cannot establish a trust handshake with your own device token.");
+    return;
+  }
+  try {
+    await api("grantGlobalTrust", { trustTarget: peerToken });
+    alert("Global Trust handshake established successfully! This colleague can now edit or update records you create.");
+    document.getElementById("s-peer-token").value = "";
+  } catch (err) {
+    alert("Failed to save trust mapping: " + err.message);
+  }
 }
 async function saveSetup() {
   const parts = document.getElementById("s-date").value.split("-");
