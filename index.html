@@ -844,7 +844,7 @@ function renderRangeAuditView() {
     
     <div class="report-actions" style="padding: 0 14px; margin-bottom: 12px; display: flex; gap: 8px;">
       <button class="btn-excel" onclick="exportRangeAuditExcel()" style="flex:1;">📥 Export Unreturned</button>
-      <button class="btn-share" onclick="dumpFullRangeDataExcel()" style="flex:1; background: #7c3aed; color: white;">📊 Export Full Range (Excel)</button>
+      <button class="btn-share" onclick="dumpFullRangeDataCSV()" style="flex:1; background: #7c3aed; color: white;">📊 Export Full Range (CSV)</button>
       <button id="range-capture-btn" onclick="captureRangeAuditImage()" style="background:#10b981; color:white; padding:11px; border-radius:10px; border:none; font-size:13px; font-weight:700; cursor:pointer; flex:1;">📸 Save Image</button>
     </div>
     
@@ -932,7 +932,7 @@ function applyRangeAudit() {
 // ══════════════════════════════════════
 //  EXPORT & SHARE
 // ══════════════════════════════════════
-function dumpFullRangeDataExcel() {
+function dumpFullRangeDataCSV() {
   const startScore = getShiftScore(rangeStartDate, rangeStartShift);
   const endScore = getShiftScore(rangeEndDate, rangeEndShift);
   
@@ -958,82 +958,71 @@ function dumpFullRangeDataExcel() {
   // Sort chronologically
   rangePermits.sort((a, b) => getShiftScore(a.shiftDate, a.shift) - getShiftScore(b.shiftDate, b.shift));
 
-  // Build clean native Excel HTML structures with proper headers style
-  let excelTemplate = `
-    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        th { background-color: #1e3a5f; color: #ffffff; font-weight: bold; border: 0.5pt solid #cbd5e1; padding: 6px; }
-        td { border: 0.5pt solid #cbd5e1; padding: 4px; font-family: Arial, sans-serif; font-size: 10pt; }
-        .title-hdr { font-size: 14pt; font-weight: bold; color: #1e3a5f; text-align: left; }
-      </style>
-    </head>
-    <body>
-      <table>
-        <tr><td colspan="15" class="title-hdr">ARS OPERATIONS FULL DATA DUMP REPORT</td></tr>
-        <tr><td colspan="15"><b>Timeframe Window Range:</b> ${rangeStartDate} (${rangeStartShift}) to ${rangeEndDate} (${rangeEndShift})</td></tr>
-        <tr><td colspan="15"><b>Total Extracted Records:</b> ${rangePermits.length} logs</td></tr>
-        <tr></tr>
-        <thead>
-          <tr>
-            <th>System ID</th>
-            <th>Shift Date</th>
-            <th>Shift</th>
-            <th>Order No</th>
-            <th>Type</th>
-            <th>Section</th>
-            <th>Job Description</th>
-            <th>Receiver</th>
-            <th>Contact No</th>
-            <th>Isolation Time</th>
-            <th>Issue Time</th>
-            <th>Extended Time</th>
-            <th>Returned Time</th>
-            <th>Permit Structure</th>
-            <th>Status</th>
-            <th>Issued By</th>
-          </tr>
-        </thead>
-        <tbody>
-  `;
+  const headers = ["System ID", "Shift Date", "Shift", "Order No", "Type", "Section", "Job Description", "Receiver", "Contact No", "Isolation Time", "Issue Time", "Extended Time", "Returned Time", "Permit Structure", "Status", "Issued By"];
+  
+  const rows = rangePermits.map(p => [
+    p.id || "",
+    p.shiftDate || "",
+    p.shift || "",
+    p.orderNo || "",
+    classifyOrder(p.orderNo),
+    p.section || "",
+    p.jobDescription || "",
+    p.receiver || "",
+    p.contactNo || "",
+    p.isolationTime || "—",
+    p.issueTime || "—",
+    p.extendedTime || "—",
+    p.returnedTime || "—",
+    (p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated",
+    p.status || "Issued",
+    p.issuer || ""
+  ]);
 
-  rangePermits.forEach(p => {
-    excelTemplate += `
-      <tr>
-        <td>${p.id || ""}</td>
-        <td>${p.shiftDate || ""}</td>
-        <td style="text-align:center;">${p.shift || ""}</td>
-        <td style="font-family:monospace; mso-number-format:'\\@';">${p.orderNo || ""}</td>
-        <td>${classifyOrder(p.orderNo)}</td>
-        <td>${p.section || ""}</td>
-        <td>${esc(p.jobDescription || "")}</td>
-        <td>${esc(p.receiver || "")}</td>
-        <td style="mso-number-format:'\\@';">${p.contactNo || ""}</td>
-        <td>${p.isolationTime || "—"}</td>
-        <td>${p.issueTime || "—"}</td>
-        <td>${p.extendedTime || "—"}</td>
-        <td>${p.returnedTime || "—"}</td>
-        <td>${(p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated"}</td>
-        <td>${p.status || "Issued"}</td>
-        <td>${esc(p.issuer || "")}</td>
-      </tr>
-    `;
-  });
+  // Compile standard clean CSV string format with UTF-8 BOM declaration
+  const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const fileName = `Full_CSV_Dump_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.csv`;
 
-  excelTemplate += `</tbody></table></body></html>`;
-
-  const blob = new Blob([excelTemplate], { type: "application/vnd.ms-excel;charset=utf-8;" });
-  const downloadUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = downloadUrl;
-  link.download = `Full_Excel_Dump_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.xls`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(downloadUrl);
+  // --- iOS/iPhone Secure Download Handling Engine ---
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) {
+    const reader = new FileReader();
+    reader.onloadend = function () {
+      const url = reader.result;
+      const newWindow = window.open();
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <head><title>Export Preview</title><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+            <body style="margin:0; font-family:-apple-system,sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; text-align:center; background:#f1f5f9;">
+              <div style="background:white; padding:24px; border-radius:16px; box-shadow:0 4px 12px rgba(0,0,0,0.1); max-width:90%;">
+                <div style="font-size:48px; margin-bottom:12px;">📥</div>
+                <h3 style="margin:0 0 8px 0; color:#1e3a5f;">Your Data Dump is Ready</h3>
+                <p style="font-size:13px; color:#64748b; margin-bottom:20px;">Tap the button below to download or copy your CSV report file data.</p>
+                <a href="${url}" download="${fileName}" style="display:inline-block; background:#2563eb; color:white; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:14px;">Download CSV File</a>
+              </div>
+            </body>
+          </html>
+        `);
+        newWindow.document.close();
+      } else {
+        alert("Pop-up blocked! Please allow pop-ups for this site to export data.");
+      }
+    };
+    reader.readAsDataURL(blob);
+  } else {
+    // Standard Desktop / Android Download Route Flow
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 }
-
 
 // Function to export Range Audit cards data to a downloadable CSV/Excel file structure
 function exportRangeAuditExcel() {
@@ -1042,26 +1031,59 @@ function exportRangeAuditExcel() {
     alert("No unreturned range data to export.");
     return;
   }
-  const headers = ["Order No", "Job Description", "Section", "Receiver","Contact No", "Last Seen Date", "Last Seen Shift", "Last Status"];
+  
+  const headers = ["Order No", "Job Description", "Section", "Receiver", "Contact No", "Last Seen Date", "Last Seen Shift", "Last Status"];
   const rows = rangeMissing.map(p => [
-    `"${String(p.orderNo || "").replace(/"/g, '""')}"`,
-    `"${String(p.jobDescription || "").replace(/"/g, '""')}"`,
-    `"${String(p.section || "").replace(/"/g, '""')}"`,
-    `"${String(p.receiver || "").replace(/"/g, '""')}"`,
-    `"${String(p.contactNo || "").replace(/"/g, '""')}"`,
-    `"${String(p.lastSeenDate || "").replace(/"/g, '""')}"`,
-    `"${String(p.lastSeenShift || "").replace(/"/g, '""')}"`,
-    `"${String(p.lastStatus || "").replace(/"/g, '""')}"`
+    p.orderNo || "",
+    p.jobDescription || "",
+    p.section || "",
+    p.receiver || "",
+    p.contactNo || "",
+    p.lastSeenDate || "",
+    p.lastSeenShift || "",
+    p.lastStatus || "Issued"
   ]);
-  const csvContent = "data:text/csv;charset=utf-8," 
-    + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `Range_Audit_Report_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+
+  const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const fileName = `Range_Audit_Unreturned_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.csv`;
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) {
+    const reader = new FileReader();
+    reader.onloadend = function () {
+      const url = reader.result;
+      const newWindow = window.open();
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <head><title>Export Preview</title><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+            <body style="margin:0; font-family:-apple-system,sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; text-align:center; background:#f1f5f9;">
+              <div style="background:white; padding:24px; border-radius:16px; box-shadow:0 4px 12px rgba(0,0,0,0.1); max-width:90%;">
+                <div style="font-size:48px; margin-bottom:12px;">📥</div>
+                <h3 style="margin:0 0 8px 0; color:#1e3a5f;">Unreturned Permits List Ready</h3>
+                <p style="font-size:13px; color:#64748b; margin-bottom:20px;">Tap the button below to complete the CSV download on your device.</p>
+                <a href="${url}" download="${fileName}" style="display:inline-block; background:#16a34a; color:white; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:14px;">Download CSV File</a>
+              </div>
+            </body>
+          </html>
+        `);
+        newWindow.document.close();
+      } else {
+        alert("Pop-up blocked! Please allow pop-ups for this site.");
+      }
+    };
+    reader.readAsDataURL(blob);
+  } else {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 }
 async function captureRangeAuditImage() {
     // 1. Target the main Range-Audit container wrapper specifically
