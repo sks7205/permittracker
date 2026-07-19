@@ -1991,7 +1991,7 @@ function permitFormHTML(title, p={}, isEdit=false) {
     </div>`;
 }
 // ══════════════════════════════════════
-//  SCAN PERMIT via Tesseract OCR
+//  SCAN PERMIT via GEMINI
 // ══════════════════════════════════════
 function startScan() {
   showModal(`
@@ -2017,68 +2017,69 @@ function startScan() {
 async function processScan(input) {
   const file = input.files[0];
   if (!file) return;
-  // Show preview
+
   const preview = document.getElementById("scan-preview");
   preview.src = URL.createObjectURL(file);
   preview.style.display = "block";
+
   const status = document.getElementById("scan-status");
   status.style.display = "block";
-  status.innerHTML = "⏳ Reading permit... this takes ~10 seconds";
-  try {
-    const result = await Tesseract.recognize(file, "eng", {
-      logger: m => {
-        if (m.status === "recognizing text") {
-          const pct = Math.round(m.progress * 100);
-          if (status) status.innerHTML = "⏳ Reading... " + pct + "%";
-        }
+  status.style.background = "#eff6ff";
+  status.style.color = "#1d4ed8";
+  status.innerHTML = "⏳ Sending to AI... this takes 3–5 seconds.";
+
+  // Compress image before sending — reduces payload and speeds up Gemini
+  const canvas = document.createElement("canvas");
+  const img = new Image();
+  img.onload = async () => {
+    // Resize to max 1200px wide — Gemini doesn't need more
+    const MAX = 1200;
+    let w = img.width, h = img.height;
+    if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+    canvas.width = w; canvas.height = h;
+    canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+    const base64Image = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
+
+    try {
+      const result = await api("ocrPermit", { base64Image });
+
+      if (!result || result.error) {
+        throw new Error(result ? result.error : "No response from server.");
       }
-    });
-    const text = result.data.text;
-    console.log("OCR raw text:", text);
-    // Extract Order No — find 8 or 9 digit number
-    // Permit format: Order No/HW  14054013/200664255
-    // We want the FIRST number before the slash — the work order
-    const orderMatch = text.match(/\b(1\d{7}|[1-4]\d{8})\b/);
-    const orderNo = orderMatch ? orderMatch[1] : "";
-    // Extract Description of Work
-    // Label on permit: "Description of Work"
-    const descMatch = text.match(/Description\s+of\s+Work[:\s]+([^\n]+)/i);
-    let jobDesc = descMatch ? descMatch[1].trim() : "";
-    // Clean up OCR noise — remove leading punctuation
-    jobDesc = jobDesc.replace(/^[^a-zA-Z0-9]+/, "").trim();
-    status.style.display = "none";
-    if (!orderNo && !jobDesc) {
-      status.style.display = "block";
-      status.style.background = "#fff1f2";
-      status.style.borderColor = "#fecdd3";
-      status.style.color = "#be123c";
-      status.innerHTML = "⚠️ Could not read permit clearly. Try better lighting or enter manually.";
-      return;
-    }
-    // Open form with extracted values pre-filled
-    removeModal();
-    showPermitForm({ orderNo, jobDescription: jobDesc });
-    // Show what was found
-    if (orderNo || jobDesc) {
+
+      const orderNo = String(result.orderNo || "").replace(/\D/g,"").trim();
+      const jobDescription = String(result.jobDescription || "").trim();
+
+      status.style.background = "#dcfce7";
+      status.style.color = "#16a34a";
+      status.innerHTML = orderNo
+        ? `✅ Scanned: Order <b>${orderNo}</b> — verify and complete remaining fields.`
+        : "✅ AI read the image — please verify the fields below.";
+
       setTimeout(() => {
-        const banner = document.createElement("div");
-        banner.style = "background:#dcfce7;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;font-size:12px;color:#16a34a;margin-bottom:14px";
-        banner.innerHTML = "✅ Scanned: " +
-          (orderNo ? "<b>Order " + orderNo + "</b> " : "") +
-          (jobDesc ? "· " + jobDesc.slice(0,40) + (jobDesc.length>40?"...":"") : "");
-        const body = document.querySelector(".modal-body");
-        if (body) body.insertBefore(banner, body.firstChild);
-      }, 100);
-    }
-  } catch(err) {
-    console.error("OCR error:", err);
-    if (status) {
-      status.style.display = "block";
+        removeModal();
+        showPermitForm({ orderNo, jobDescription });
+        // Show confirmation banner inside the form
+        setTimeout(() => {
+          const banner = document.createElement("div");
+          banner.style.cssText = "background:#dcfce7;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;font-size:12px;color:#16a34a;margin-bottom:14px";
+          banner.innerHTML = "✅ AI Scanned — " +
+            (orderNo ? `Order <b>${orderNo}</b>` : "Order not detected") +
+            (jobDescription ? ` · ${jobDescription.slice(0,50)}${jobDescription.length>50?"...":""}` : "");
+          const body = document.querySelector(".modal-body");
+          if (body) body.insertBefore(banner, body.firstChild);
+        }, 80);
+      }, 600);
+
+    } catch(err) {
+      console.error("AI scan error:", err);
       status.style.background = "#fff1f2";
       status.style.color = "#be123c";
-      status.innerHTML = "❌ Scan failed. Please enter manually.";
+      status.innerHTML = "❌ " + (err.message || "AI processing failed.") +
+        " &nbsp;<button onclick=\"showPermitForm()\" style=\"background:#e11d48;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer\">Enter Manually</button>";
     }
-  }
+  };
+  img.src = URL.createObjectURL(file);
 }
 // ══════════════════════════════════════
 //  SAVE / DELETE
