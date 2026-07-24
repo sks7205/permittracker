@@ -193,6 +193,7 @@ let customFilters = {
   shifts: [],       // Array of checked shifts: ["A", "B", "C", "G"]
   orderTypes: [],   // Array of checked types: ["MA", "M1", "M2", "M3", "M4"]
   sections: [],     // Array of checked sections: ["Electrical", "Mechanical", "Operation"]
+  receivers: [],
   status: "",       // Single pick: "extended", "returned", "blank", "ext_and_ret", "duplicates"
   unit: ""          // Single pick: "ARS-2", "ARS-3"
 };
@@ -227,6 +228,11 @@ function evalCustomFilter(p, allPermitsInContext) {
   // 3. Section Match Rule (Multiple Selected Checkboxes)
   if (customFilters.sections && customFilters.sections.length > 0) {
     if (!customFilters.sections.includes(p.section)) return false;
+  }
+
+  // 3.5 Receiver Match Rule (Dynamic Multiple Checkboxes)
+  if (customFilters.receivers && customFilters.receivers.length > 0) {
+    if (!customFilters.receivers.includes(p.receiver)) return false;
   }
 
   // 4. Unit Match Rule (ARS-2 or ARS-3)
@@ -1736,6 +1742,10 @@ function openCustomFilterModal() {
   const shiftsList = ["A", "B", "C", "G"];
   const typesList = ["MA", "M1", "M2", "M3", "M4"];
   const sectionsList = ["Electrical", "Mechanical", "Operation"];
+  
+  // Dynamically extract unique receiver names from currently active permits
+  const ap = activePermits();
+  const receiversList = [...new Set(ap.map(p => p.receiver).filter(Boolean))].sort();
 
   const html = `
     <div class="modal-header">
@@ -1748,7 +1758,7 @@ function openCustomFilterModal() {
         <label>Shift Filter Criteria</label>
         <div style="display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap;">
           ${shiftsList.map(s => {
-            const isChecked = customFilters.shifts.includes(s) ? 'checked' : '';
+            const isChecked = (customFilters.shifts || []).includes(s) ? 'checked' : '';
             return `
               <label style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #000000; cursor: pointer;">
                 <input type="checkbox" name="c-shift" value="${s}" ${isChecked} style="width: 18px; height: 18px; accent-color: #1e3a5f;">
@@ -1763,7 +1773,7 @@ function openCustomFilterModal() {
         <label>Order Type Category Selection</label>
         <div style="display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap;">
           ${typesList.map(t => {
-            const isChecked = customFilters.orderTypes.includes(t) ? 'checked' : '';
+            const isChecked = (customFilters.orderTypes || []).includes(t) ? 'checked' : '';
             return `
               <label style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #000000; cursor: pointer;">
                 <input type="checkbox" name="c-type" value="${t}" ${isChecked} style="width: 18px; height: 18px; accent-color: #1e3a5f;">
@@ -1778,11 +1788,27 @@ function openCustomFilterModal() {
         <label>Section Domain Area</label>
         <div style="display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap;">
           ${sectionsList.map(sec => {
-            const isChecked = customFilters.sections.includes(sec) ? 'checked' : '';
+            const isChecked = (customFilters.sections || []).includes(sec) ? 'checked' : '';
             return `
               <label style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #000000; cursor: pointer;">
                 <input type="checkbox" name="c-section" value="${sec}" ${isChecked} style="width: 18px; height: 18px; accent-color: #1e3a5f;">
                 ${sec}
+              </label>
+            `;
+          }).join("")}
+        </div>
+      </div>
+      
+      <!-- NEW DYNAMIC RECEIVER SECTION -->
+      <div class="field" style="margin-top: 20px;">
+        <label>Receiver (Active Only)</label>
+        <div style="display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap;">
+          ${receiversList.length === 0 ? '<span style="font-size:13px; color:#64748b;">No active receivers available.</span>' : receiversList.map(r => {
+            const isChecked = (customFilters.receivers || []).includes(r) ? 'checked' : '';
+            return `
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #000000; cursor: pointer;">
+                <input type="checkbox" name="c-receiver" value="${esc(r)}" ${isChecked} style="width: 18px; height: 18px; accent-color: #1e3a5f;">
+                ${esc(r)}
               </label>
             `;
           }).join("")}
@@ -1821,7 +1847,6 @@ function openCustomFilterModal() {
 }
 
 function applyCustomFilters() {
-  // Capture the checkbox selections
   const shiftBoxes = document.querySelectorAll('input[name="c-shift"]:checked');
   customFilters.shifts = Array.from(shiftBoxes).map(cb => cb.value);
 
@@ -1830,16 +1855,19 @@ function applyCustomFilters() {
 
   const sectionBoxes = document.querySelectorAll('input[name="c-section"]:checked');
   customFilters.sections = Array.from(sectionBoxes).map(cb => cb.value);
+  
+  // Capture the dynamic receiver selections
+  const receiverBoxes = document.querySelectorAll('input[name="c-receiver"]:checked');
+  customFilters.receivers = Array.from(receiverBoxes).map(cb => cb.value);
 
-  // Capture dropdown parameters 
   customFilters.unit = document.getElementById("c-unit").value;
   customFilters.status = document.getElementById("c-status").value;
 
-  // Determine activation parameters
   isCustomFilterActive = (
     customFilters.shifts.length > 0 ||
     customFilters.orderTypes.length > 0 ||
     customFilters.sections.length > 0 ||
+    customFilters.receivers.length > 0 || // Include receivers in active check
     !!customFilters.unit ||
     !!customFilters.status
   );
@@ -1854,6 +1882,7 @@ function resetCustomFilters() {
     shifts: [],
     orderTypes: [],
     sections: [],
+    receivers: [], // Reset dynamic receivers
     status: "",
     unit: ""
   };
