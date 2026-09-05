@@ -15,8 +15,9 @@
   .header-sub { font-size: 12px; color: #93c5fd; margin-top: 2px; }
   .header-actions { display: flex; gap: 8px; }
   .icon-btn { background: rgba(255,255,255,0.12); border: none; color: white; width: 38px; height: 38px; border-radius: 10px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  .tabs { display: flex; gap: 6px; }
-  .tab { flex: 1; padding: 8px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: #93c5fd; }
+  .tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: 1; padding: 8px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: #93c5fd; white-space: nowrap; }
   .tab.active { background: white; color: #1e3a5f; }
   .sync-bar { background: #e2e8f0; text-align: center; font-size: 11px; color: #64748b; padding: 4px; border-bottom: 1px solid #cbd5e1; }
   .setup-banner { background: #fef3c7; border-bottom: 1px solid #fde68a; padding: 10px 16px; font-size: 13px; color: #92400e; display: flex; align-items: center; gap: 8px; cursor: pointer; }
@@ -31,7 +32,6 @@
   .pill-elec-off{ background: white;  color: #64748b; border-color: #e2e8f0; }
   .pill-oper   { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
   .pill-oper-off{ background: white;  color: #64748b; border-color: #e2e8f0; }
-  /* New Filter Pill Active / Off Styles */
   .pill-returned     { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
   .pill-returned-off { background: white;   color: #64748b; border-color: #e2e8f0; }
   .pill-extended     { background: #fff7ed; color: #ea580c; border-color: #fed7aa; }
@@ -46,10 +46,8 @@
   .pill-m3-off       { background: white;   color: #64748b; border-color: #e2e8f0; }
   .pill-m4           { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
   .pill-m4-off       { background: white;   color: #64748b; border-color: #e2e8f0; }
-  /* Duplicates Filter Pill Styles */
   .pill-duplicate     { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
   .pill-duplicate-off { background: white;   color: #64748b; border-color: #e2e8f0; }
-  /* Keep the warning badge style for inside the cards as well */
   .badge-duplicate { background: #fef2f2; color: #991b1b; border-color: #fca5a5; font-weight: 800; }
   .list { padding: 12px 14px 100px; }
   .empty { text-align: center; padding: 60px 20px; color: #94a3b8; }
@@ -83,7 +81,6 @@
   .field input, .field textarea, .field select { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px; font-size: 16px; color: #0f172a; background: #f8fafc; outline: none; font-family: inherit; }
   .field input:focus, .field textarea:focus, .field select:focus { border-color: #3b82f6; background: white; }
   .field textarea { resize: none; }
-  /* AUTOCOMPLETE - key: no blur handler, use touchend+click on items */
   .ac-wrap { position: relative; }
   .ac-list { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #3b82f6; border-top: none; border-radius: 0 0 12px 12px; z-index: 9999; max-height: 220px; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
   .ac-item { padding: 14px 12px; font-size: 15px; color: #1e293b; border-bottom: 1px solid #f1f5f9; }
@@ -102,7 +99,6 @@
   .toggle-row { display: flex; align-items: center; gap: 12px; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 10px; padding: 12px; margin-bottom: 18px; }
   .toggle-row input[type=checkbox] { width: 22px; height: 22px; accent-color: #2563eb; cursor: pointer; }
   .toggle-row label { font-size: 14px; font-weight: 600; color: #1d4ed8; cursor: pointer; }
-  /* Extended / Returned section in form */
   .ext-ret-row { display: flex; gap: 8px; margin-bottom: 18px; }
   .ext-ret-btn { flex: 1; padding: 10px 6px; border-radius: 10px; border: 2px solid #e2e8f0; background: #f8fafc; font-size: 12px; font-weight: 700; cursor: pointer; text-align: center; color: #64748b; }
   .ext-ret-btn.active-ext { background: #fff7ed; color: #ea580c; border-color: #fb923c; }
@@ -125,26 +121,15 @@
   th { background: #f8fafc; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 10px; padding: 8px 6px; border: 1px solid #e2e8f0; white-space: nowrap; }
   td { padding: 8px 6px; border: 1px solid #e2e8f0; vertical-align: top; }
   tr:nth-child(even) td { background: #f8fafc; }
-  /* Force clear black visibility for elements inside Report, Audit, and Range Audit tables */
-table, th, td, .card, .card-order, .card-desc {
-  color: #000000 !important;
-}
-/* Ensure data cell typography in even alternating row backgrounds is also black */
-tr:nth-child(even) td {
-  background: #f8fafc;
-  color: #000000 !important;
-}
-/* Ensure labels inside the Range Audit container view remain legible and black */
-.range-audit-container, .range-audit-container p, .range-audit-containerspan {
-  color: #000000 !important;
-}
+  table, th, td, .card, .card-order, .card-desc { color: #000000 !important; }
+  tr:nth-child(even) td { background: #f8fafc; color: #000000 !important; }
+  .range-audit-container, .range-audit-container p, .range-audit-containerspan { color: #000000 !important; }
   .report-hint { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 10px; }
   .loading { text-align: center; padding: 80px 20px; color: #64748b; }
   .spinner { font-size: 36px; animation: spin 1s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .config-screen { padding: 20px 16px; }
   .config-screen h2 { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
-  /* Scan permit */
   .scan-choice { display: flex; gap: 10px; margin-bottom: 18px; }
   .scan-choice button { flex:1; padding:16px 8px; border-radius:14px; border:2px solid #e2e8f0; background:#f8fafc; font-size:13px; font-weight:700; cursor:pointer; color:#1e293b; display:flex; flex-direction:column; align-items:center; gap:6px; }
   .scan-choice button span { font-size:28px; }
@@ -165,9 +150,12 @@ tr:nth-child(even) td {
 // ══════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════
-let API_URL = localStorage.getItem("ars2_api_url") || "";
+const API_URL = "https://script.google.com/macros/s/AKfycbyVf-1ymRgP3Pxy0eF4-zjD_nNHdVEpgOgB12i2QjCLJeRwB6n9h6VoreVteCKDaYcX/exec"; 
+
 let permits = [];
-// ─── ADDED FOR GLOBAL TRUST REGISTRY LAYER ───
+let requests = [];     
+let isIssuer = false;  
+
 if (!localStorage.getItem("DEVICE_TOKEN")) {
   const arr = new Uint8Array(16);
   window.crypto.getRandomValues(arr);
@@ -175,294 +163,153 @@ if (!localStorage.getItem("DEVICE_TOKEN")) {
   localStorage.setItem("DEVICE_TOKEN", "DEV-" + token);
 }
 const DEVICE_TOKEN = localStorage.getItem("DEVICE_TOKEN");
-// ─────────────────────────────────────────────
-// meta is stored per-phone in localStorage — never overwritten by sheet
+
+function getAutoShift() {
+  const h = new Date().getHours();
+  if (h >= 6 && h < 14) return "A";
+  if (h >= 14 && h < 22) return "B";
+  return "C";
+}
+
 function loadMeta() {
   try {
     const saved = localStorage.getItem("ars2_meta");
     if (saved) return JSON.parse(saved);
   } catch(e) {}
-  return { date: todayStr(), shift: "", issuer: "" };
+  return { date: todayStr(), shift: getAutoShift(), issuer: "" };
 }
 let meta = loadMeta();
 let currentView = "list";
 let sectionFilter = "ALL";
-// ─── ADVANCED CUSTOM MULTI-CRITERIA FILTERS STATE ───
 let isCustomFilterActive = false;
-let customFilters = {
-  shifts: [],       // Array of checked shifts: ["A", "B", "C", "G"]
-  orderTypes: [],   // Array of checked types: ["MA", "M1", "M2", "M3", "M4"]
-  sections: [],     // Array of checked sections: ["Electrical", "Mechanical", "Operation"]
-  receivers: [],
-  status: "",       // Single pick: "extended", "returned", "blank", "ext_and_ret", "duplicates"
-  unit: ""          // Single pick: "ARS-2", "ARS-3"
-};
-
+let customFilters = { shifts: [], orderTypes: [], sections: [], receivers: [], status: "", unit: "" };
 let editingPermit = null;
 let syncing = false;
 let lastSync = null;
 let refreshTimer = null;
 
-// Make sure these are declared globally at the top level of your script
 let rangeStartDate = "";
 let rangeEndDate = "";
-let rangeStartShift = "A"; // Or default to meta.shift if you prefer
-let rangeEndShift = "C";   // Or default to meta.shift if you prefer
+let rangeStartShift = "A";
+let rangeEndShift = "C";   
+
 // ══════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════
 function evalCustomFilter(p, allPermitsInContext) {
   if (!isCustomFilterActive) return true;
-
-  // 1. Shift Match Rule (Multiple Selected Checkboxes)
-  if (customFilters.shifts && customFilters.shifts.length > 0) {
-    if (!customFilters.shifts.includes(p.shift)) return false;
-  }
-
-  // 2. Order Type Match Rule (Multiple Selected Checkboxes)
-  if (customFilters.orderTypes && customFilters.orderTypes.length > 0) {
-    const oType = classifyOrder(p.orderNo);
-    if (!customFilters.orderTypes.includes(oType)) return false;
-  }
-
-  // 3. Section Match Rule (Multiple Selected Checkboxes)
-  if (customFilters.sections && customFilters.sections.length > 0) {
-    if (!customFilters.sections.includes(p.section)) return false;
-  }
-
-  // 3.5 Receiver Match Rule (Dynamic Multiple Checkboxes)
-  if (customFilters.receivers && customFilters.receivers.length > 0) {
-    if (!customFilters.receivers.includes(p.receiver)) return false;
-  }
-
-  // 4. Unit Match Rule (ARS-2 or ARS-3)
-  if (customFilters.unit) {
-    const permitUnit = String(p.unit || "").trim().toUpperCase();
-    const filterUnit = customFilters.unit.trim().toUpperCase();
-    if (permitUnit !== filterUnit) return false;
-  }
-
-  // 5. Special Combined Status Match Rules
+  if (customFilters.shifts && customFilters.shifts.length > 0) { if (!customFilters.shifts.includes(p.shift)) return false; }
+  if (customFilters.orderTypes && customFilters.orderTypes.length > 0) { const oType = classifyOrder(p.orderNo); if (!customFilters.orderTypes.includes(oType)) return false; }
+  if (customFilters.sections && customFilters.sections.length > 0) { if (!customFilters.sections.includes(p.section)) return false; }
+  if (customFilters.receivers && customFilters.receivers.length > 0) { if (!customFilters.receivers.includes(p.receiver)) return false; }
+  if (customFilters.unit) { const permitUnit = String(p.unit || "").trim().toUpperCase(); const filterUnit = customFilters.unit.trim().toUpperCase(); if (permitUnit !== filterUnit) return false; }
   if (customFilters.status) {
     const hasExtValue = !!String(p.extendedTime || "").trim();
     const hasRetValue = !!String(p.returnedTime || "").trim();
-
-    if (customFilters.status === "extended") {
-      if (p.status !== "extended") return false;
-    } else if (customFilters.status === "returned") {
-      if (p.status !== "returned") return false;
-    } else if (customFilters.status === "blank") {
-      // Neither extended nor returned lifecycle status tags
-      if (p.status === "extended" || p.status === "returned") return false;
-    } else if (customFilters.status === "ext_and_ret") {
-      // Must explicitly contain both an Extended Time value AND a Returned Time value
-      if (!hasExtValue || !hasRetValue) return false;
+    if (customFilters.status === "extended") { if (p.status !== "extended") return false;
+    } else if (customFilters.status === "returned") { if (p.status !== "returned") return false;
+    } else if (customFilters.status === "blank") { if (p.status === "extended" || p.status === "returned") return false;
+    } else if (customFilters.status === "ext_and_ret") { if (!hasExtValue || !hasRetValue) return false;
     } else if (customFilters.status === "duplicates") {
-      const currentNo = String(p.orderNo || "").trim();
-      const currentShift = String(p.shift || "").trim();
-      const currentDate = String(p.shiftDate || "").trim();
+      const currentNo = String(p.orderNo || "").trim(); const currentShift = String(p.shift || "").trim(); const currentDate = String(p.shiftDate || "").trim();
       if (!currentNo || !currentShift || !currentDate) return false;
-
-      // Scan all active list records to verify duplicate status flags
-      const count = allPermitsInContext.filter(x => 
-        String(x.orderNo || "").trim() === currentNo && 
-        String(x.shift || "").trim() === currentShift &&
-        String(x.shiftDate || "").trim() === currentDate
-      ).length;
+      const count = allPermitsInContext.filter(x => String(x.orderNo || "").trim() === currentNo && String(x.shift || "").trim() === currentShift && String(x.shiftDate || "").trim() === currentDate ).length;
       if (count <= 1) return false;
     }
   }
-
   return true;
 }
 
 function selectUnit(unitVal) {
   document.getElementById("f-unit").value = unitVal;
-  
   const b2 = document.getElementById("btn-unit-ars2");
   const b3 = document.getElementById("btn-unit-ars3");
-  
-  if (unitVal === "ARS-2") {
-    b2.classList.add("active-mech");
-    b3.classList.remove("active-elec");
-  } else {
-    b3.classList.add("active-elec");
-    b2.classList.remove("active-mech");
-  }
+  if (unitVal === "ARS-2") { b2.classList.add("active-mech"); b3.classList.remove("active-elec"); } 
+  else { b3.classList.add("active-elec"); b2.classList.remove("active-mech"); }
 }
 
-// Helper to turn DD/MM/YYYY and Shift into a chronological comparison number
 function getShiftScore(dateStr, shift) {
   if (!dateStr) return 0;
   const parts = dateStr.split("/");
   if (parts.length !== 3) return 0;
-  const day = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1;
-  const year = parseInt(parts[2], 10);
+  const day = parseInt(parts[0], 10); const month = parseInt(parts[1], 10) - 1; const year = parseInt(parts[2], 10);
   const dateObj = new Date(year, month, day);
   let shiftVal = 0;
-  if (shift === "A") shiftVal = 1;
-  if (shift === "B") shiftVal = 2;
-  if (shift === "C") shiftVal = 3;
-  if (shift === "G") shiftVal = 1.5;
+  if (shift === "A") shiftVal = 1; if (shift === "B") shiftVal = 2; if (shift === "C") shiftVal = 3; if (shift === "G") shiftVal = 1.5;
   return dateObj.getTime() + (shiftVal * 100000);
 }
-// Logic to pull unreturned permits in the selected range
-function getRangeUnreturnedPermits() {
-  // If dates aren't set yet, fallback to meta date
-  const startD = rangeStartDate || meta.date;
-  const endD = rangeEndDate || meta.date;
-  const startScore = getShiftTimelineScore(startD, rangeStartShift);
-  const endScore = getShiftTimelineScore(endD, rangeEndShift);
-  if (startScore > endScore) return [];
-  const targetOrdersMap = new Map();
-  // Find all permits that fall within the selected timeframe window
-  permits.forEach(p => {
-    const d = String(p.shiftDate || "").trim();
-    const s = String(p.shift || "").trim();
-    if (!d || !s) return;
-    const itemScore = getShiftTimelineScore(d, s);
-    if (itemScore >= startScore && itemScore <= endScore) {
-      if (!targetOrdersMap.has(p.orderNo) || itemScore > getShiftTimelineScore(targetOrdersMap.get(p.orderNo).shiftDate, targetOrdersMap.get(p.orderNo).shift)) {
-        targetOrdersMap.set(p.orderNo, p);
-      }
-    }
-  });
-  const unreturnedList = [];
-  // Check the absolute latest status of those permits across the entire system database
-  for (let [orderNo, targetPermit] of targetOrdersMap) {
-    const history = permits.filter(p => String(p.orderNo).trim() === String(orderNo).trim());
-    let latestPermit = history[0];
-    let maxScore = getShiftTimelineScore(latestPermit.shiftDate, latestPermit.shift);
-    for (let i = 1; i < history.length; i++) {
-      const score = getShiftTimelineScore(history[i].shiftDate, history[i].shift);
-      if (score > maxScore) {
-        maxScore = score;
-        latestPermit = history[i];
-      }
-    }
-    // If its absolute latest status across the database is NOT returned, it's unreturned!
-    if (latestPermit && latestPermit.status !== "returned") {
-      unreturnedList.push({
-        orderNo: orderNo,
-        jobDescription: latestPermit.jobDescription || targetPermit.jobDescription,
-        section: latestPermit.section || targetPermit.section,
-        receiver: latestPermit.receiver || targetPermit.receiver,
-        lastSeenDate: latestPermit.shiftDate,
-        lastSeenShift: latestPermit.shift,
-        lastStatus: latestPermit.status || "Issued"
-      });
-    }
-  }
-  return unreturnedList;
-}
-// Logic to identify unreturned permits across a custom period
+
 function getRangeUnreturnedPermits() {
   const startScore = getShiftScore(rangeStartDate, rangeStartShift);
   const endScore = getShiftScore(rangeEndDate, rangeEndShift);
   if (startScore > endScore) return [];
-  // 1. Gather all unique order numbers matching our target date/shift timeframe
   const targetOrdersMap = new Map();
   permits.forEach(p => {
-    const d = String(p.shiftDate || "").trim();
-    const s = String(p.shift || "").trim();
+    const d = String(p.shiftDate || "").trim(); const s = String(p.shift || "").trim();
     if (!d || !s) return;
     const itemScore = getShiftScore(d, s);
     if (itemScore >= startScore && itemScore <= endScore) {
-      // Keep track of the most recent entry within this range for reference
       if (!targetOrdersMap.has(p.orderNo) || itemScore > getShiftScore(targetOrdersMap.get(p.orderNo).shiftDate, targetOrdersMap.get(p.orderNo).shift)) {
         targetOrdersMap.set(p.orderNo, p);
       }
     }
   });
   const unreturnedList = [];
-  // 2. Check the absolute newest lifecycle entry of each permit in the entire system
   for (let [orderNo, targetPermit] of targetOrdersMap) {
-    // Look up all occurrences of this permit across the complete system history
     const history = permits.filter(p => String(p.orderNo).trim() === String(orderNo).trim());
-    // Track chronologically the absolute latest status entry
     let latestPermit = history[0];
     let maxScore = getShiftScore(latestPermit.shiftDate, latestPermit.shift);
     for (let i = 1; i < history.length; i++) {
       const score = getShiftScore(history[i].shiftDate, history[i].shift);
-      if (score > maxScore) {
-        maxScore = score;
-        latestPermit = history[i];
-      }
+      if (score > maxScore) { maxScore = score; latestPermit = history[i]; }
     }
-    // If the latest available record is not marked as 'returned', it's unreturned!
     if (latestPermit && latestPermit.status !== "returned") {
       unreturnedList.push({
-        orderNo: orderNo,
-        jobDescription: latestPermit.jobDescription || targetPermit.jobDescription,
-        section: latestPermit.section || targetPermit.section,
-        receiver: latestPermit.receiver || targetPermit.receiver,
-        contactNo:latestPermit.contactNo || targetPermit.contactNo,
-        lastSeenDate: latestPermit.shiftDate,
-        lastSeenShift: latestPermit.shift,
-        lastStatus: latestPermit.status || "Issued"
+        orderNo: orderNo, jobDescription: latestPermit.jobDescription || targetPermit.jobDescription,
+        section: latestPermit.section || targetPermit.section, receiver: latestPermit.receiver || targetPermit.receiver,
+        contactNo:latestPermit.contactNo || targetPermit.contactNo, lastSeenDate: latestPermit.shiftDate,
+        lastSeenShift: latestPermit.shift, lastStatus: latestPermit.status || "Issued"
       });
     }
   }
   return unreturnedList;
 }
+
 function extendUnaccountedPermit(id) {
   const oldPermit = permits.find(p => String(p.id) === String(id));
   if (!oldPermit) return;
-  // Pre-fill the form with the old data, but force the status to 'extended'
-  // and clear out the old isolation/issue times so you can stamp them fresh if needed
-  const prefill = {
-    ...oldPermit,
-    status: "extended",
-    isolationTime: "",
-    issueTime: "",
-    extendedTime: nowTime()
-  };
-  // Open as a NEW permit (not an edit) so it saves to the current shift's log
+  const prefill = { ...oldPermit, status: "extended", isolationTime: "", issueTime: "", extendedTime: nowTime() };
   showPermitForm(prefill);
 }
+
 function getPreviousShift(currentDateStr, currentShift) {
   const parts = currentDateStr.split("/");
   if (parts.length !== 3) return null;
-  // Create a proper Date object (Month is 0-indexed in JS)
   let d = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
   let prevShift = "";
-  if (currentShift === "B") { 
-    prevShift = "A"; 
-  } else if (currentShift === "C") { 
-    prevShift = "B"; 
-  } else if (currentShift === "A") { 
-    prevShift = "C";
-    d.setDate(d.getDate() - 1); // Subtract one day for the A -> C handover
-  } else {
-    // If it's "G" (General) or an unknown shift, we can't reliably predict the handover
-    return null; 
-  }
+  if (currentShift === "B") { prevShift = "A"; } 
+  else if (currentShift === "C") { prevShift = "B"; } 
+  else if (currentShift === "A") { prevShift = "C"; d.setDate(d.getDate() - 1); } 
+  else { return null; }
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
   return { date: `${dd}/${mm}/${yyyy}`, shift: prevShift };
 }
+
 function unaccountedPermits() {
   const prev = getPreviousShift(meta.date, meta.shift);
   if (!prev) return []; 
-  // Get all permits already logged in the PRESENT shift
   const currentShiftPermits = activePermits();
   return permits.filter(p => {
-    const d = String(p.shiftDate || "").trim();
-    const s = String(p.shift || "").trim();
-    // 1. Only look at permits from the exact previous shift
+    const d = String(p.shiftDate || "").trim(); const s = String(p.shift || "").trim();
     if (d !== prev.date || s !== prev.shift) return false; 
-    // 2. If it was properly returned by the outgoing shift, it is accounted for
     if (p.status === "returned") return false;
-    // 3. CROSS-CHECK: Has the PRESENT shift logged this exact orderNo as "extended"?
-    const isExtendedInCurrent = currentShiftPermits.some(currP => 
-      currP.orderNo === p.orderNo
-    );
-    // If the present shift hasn't extended it, it remains unaccounted.
+    const isExtendedInCurrent = currentShiftPermits.some(currP => currP.orderNo === p.orderNo);
     return !isExtendedInCurrent;
   });
 }
+
 function classifyOrder(orderNo) {
   const s = String(orderNo||"").trim().replace(/\D/g,"");
   if (!s) return "";
@@ -474,27 +321,22 @@ function classifyOrder(orderNo) {
   if (len===9 && first==="4") return "M4";
   return "—";
 }
-function orderTypeBadgeCls(t) {
-  return {MA:"badge-purple",M1:"badge-blue",M2:"badge-orange",M3:"badge-teal",M4:"badge-red"}[t]||"badge-gray";
-}
+function orderTypeBadgeCls(t) { return {MA:"badge-purple",M1:"badge-blue",M2:"badge-orange",M3:"badge-teal",M4:"badge-red"}[t]||"badge-gray"; }
 function sectionBadgeCls(s) {
   if (s==="Mechanical") return "badge-blue";
   if (s==="Electrical") return "badge-yellow";
   if (s==="Operation")  return "badge-green";
   return "badge-gray";
 }
-function todayStr() {
-  const d=new Date(); return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
-}
+function todayStr() { const d=new Date(); return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`; }
 function pad(n) { return String(n).padStart(2,"0"); }
 function nowTime() { return new Date().toTimeString().slice(0,5); }
 function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
 // ══════════════════════════════════════
 //  API
 // ══════════════════════════════════════
 async function api(action, body={}) {
-  if (!API_URL) throw new Error("No API URL");
-  // Injected deviceToken safely into the destructuring payload
   const res = await fetch(API_URL, {
     method:"POST", body:JSON.stringify({action, deviceToken: DEVICE_TOKEN, ...body}), headers:{"Content-Type":"text/plain"}
   });
@@ -502,12 +344,19 @@ async function api(action, body={}) {
   if (data.error) throw new Error(data.error);
   return data;
 }
+
 async function loadAll() {
-  // Only load permits from server — meta is per-phone (localStorage)
-  const p = await api("getAll");
-  permits = (p.permits||[]).map(x=>({...x, id:String(x.id)}));
+  const res = await api("getAll");
+  permits = (res.permits||[]).map(x=>({...x, id:String(x.id)}));
+  
+  isIssuer = res.isIssuer === true;
+  if (isIssuer) {
+    requests = (res.requests||[]).map(x=>({...x, id:String(x.id)}));
+  }
+  
   lastSync = new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
 }
+
 // ══════════════════════════════════════
 //  RENDER
 // ══════════════════════════════════════
@@ -515,37 +364,34 @@ function activePermits() {
   return permits.filter(p => {
     const d = String(p.shiftDate || "").trim();
     const s = String(p.shift     || "").trim();
-    // Old records without shiftDate: always show so data is never hidden
     if (!d || !s) return true;
-    // If shift selection is cleared/blank, show all entries matching just the date
-    if (!meta.shift) {
-      return d === meta.date;
-    }
+    if (!meta.shift) { return d === meta.date; }
     return d === meta.date && s === meta.shift;
   });
 }
+
 function render() {
   const app = document.getElementById("app");
-  if (!API_URL) { app.innerHTML = renderConfig(); return; }
-  // 1. SAVE SCROLL POSITIONS (Both global page window and the report table container)
+  
   const savedWindowScrollTop = window.scrollY || document.documentElement.scrollTop;
   const tableWrap = document.querySelector('.report-table-wrap');
   const savedTableScrollLeft = tableWrap ? tableWrap.scrollLeft : 0;
   const savedTableScrollTop  = tableWrap ? tableWrap.scrollTop : 0;
-  // Rebuild the HTML content
+  
   app.innerHTML = `
     ${renderHeader()}
     ${renderSyncBar()}
-    ${!meta.issuer?`<div class="setup-banner" onclick="openSetup()">⚠️ Tap to set your name and shift details</div>`:""}
+    ${!meta.issuer && isIssuer?`<div class="setup-banner" onclick="openSetup()">⚠️ Tap to set your name and shift details</div>`:""}
     <div id="main-content">
-  ${currentView === "list" ? renderList() : 
-    currentView === "report" ? renderReport() : 
-    currentView === "range_audit" ? renderRangeAuditView() :
-    renderUnaccounted()}
-</div>
+      ${currentView === "list" ? renderList() : 
+        currentView === "report" ? renderReport() : 
+        currentView === "range_audit" ? renderRangeAuditView() :
+        currentView === "requests" && isIssuer ? renderRequests() : 
+        renderUnaccounted()}
+    </div>
     ${currentView==="list"?`<button class="fab" onclick="openAdd()">+</button>`:""}
   `;
-  // 2. RESTORE TABLE SCROLL (Horizontal + Vertical inner scroll)
+  
   if (savedTableScrollLeft > 0 || savedTableScrollTop > 0) {
     const newTableWrap = document.querySelector('.report-table-wrap');
     if (newTableWrap) {
@@ -553,11 +399,11 @@ function render() {
       if (savedTableScrollTop > 0)  newTableWrap.scrollTop  = savedTableScrollTop;
     }
   }
-  // 3. RESTORE MAIN WINDOW SCROLL (Vertical page layout scroll)
   if (savedWindowScrollTop > 0) {
     window.scrollTo(0, savedWindowScrollTop);
   }
 }
+
 function renderHeader() {
   const unaccountedCount = unaccountedPermits().length;
   const alertIcon = unaccountedCount > 0 ? "🔴 " : "✅ ";
@@ -574,28 +420,104 @@ function renderHeader() {
       </div>
     </div>
     <div class="tabs">
-  <button class="tab ${currentView==='list'?'active':''}" onclick="switchView('list')">Permits (${activePermits().length})</button>
-  <button class="tab ${currentView==='report'?'active':''}" onclick="switchView('report')">📋 Report</button>
-  <button class="tab ${currentView==='unaccounted'?'active':''}" onclick="switchView('unaccounted')">${alertIcon} Audit (${unaccountedCount})</button>
-  <button class="tab ${currentView==='range_audit'?'active':''}" onclick="switchView('range_audit')">🕒 Range Audit</button>
-</div>
+      <button class="tab ${currentView==='list'?'active':''}" onclick="switchView('list')">Permits (${activePermits().length})</button>
+      <button class="tab ${currentView==='report'?'active':''}" onclick="switchView('report')">📋 Report</button>
+      <button class="tab ${currentView==='unaccounted'?'active':''}" onclick="switchView('unaccounted')">${alertIcon} Audit (${unaccountedCount})</button>
+      <button class="tab ${currentView==='range_audit'?'active':''}" onclick="switchView('range_audit')">🕒 Range</button>
+      ${isIssuer ? `<button class="tab ${currentView==='requests'?'active':''}" onclick="switchView('requests')" style="color:#f59e0b;">📥 Req (${requests.length})</button>` : ""}
+    </div>
   </div>`;
 }
+
 function renderSyncBar() {
   return `<div class="sync-bar">${lastSync?`Last synced ${lastSync} · Auto-refresh 20s`:"Connecting..."}</div>`;
 }
+
+function renderRequests() {
+  if (requests.length === 0) return `<div class="empty"><div class="empty-icon">📥</div><h3>No incoming requests</h3></div>`;
+  
+  const cards = requests.map(p => {
+    const oType = classifyOrder(p.orderNo);
+    
+    return `<div class="card" style="border-left:4px solid #f59e0b;" onclick="openRequestModal('${esc(p.id)}')">
+      <div class="card-top">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="card-order">${esc(p.orderNo)}</span>
+          ${oType&&oType!=="—"?`<span class="badge ${orderTypeBadgeCls(oType)}">${oType}</span>`:""}
+          ${p.isOnline?`<span class="badge badge-blue">Online</span>`:""}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <span class="badge badge-yellow">Pending Approval</span>
+          <div style="display:flex; gap:4px; align-items:center;">
+            ${p.unit?`<span class="badge badge-gray" style="font-size:10px; background:#475569; color:#ffffff;">${esc(p.unit)}</span>`:""}
+            ${p.section?`<span class="badge ${sectionBadgeCls(p.section)}" style="font-size:10px">${esc(p.section)}</span>`:""}
+          </div>
+        </div>
+      </div>
+      <div class="card-desc">${esc(p.jobDescription)}</div>
+      
+      <div class="card-meta" style="margin-bottom:10px;">
+        <span>📅 ${esc(p.shiftDate || "—")} (Shift ${esc(p.shift || "—")})</span>
+        <span>👤 ${esc(p.receiver)}</span>
+        ${p.contactNo?`<span>📞 ${esc(p.contactNo)}</span>`:""}
+        ${p.isolationTime?`<span>🔒 ${esc(p.isolationTime)}</span>`:""}
+        ${p.issueTime?`<span>✅ ${esc(p.issueTime)}</span>`:""}
+        ${p.extendedTime?`<span>⏰ Ext: ${esc(p.extendedTime)}</span>`:""}
+        ${p.returnedTime?`<span>🔁 Ret: ${esc(p.returnedTime)}</span>`:""}
+        ${p.issuer?`<span style="color:#94a3b8">${esc(p.issuer)}</span>`:""}
+      </div>
+      
+      <div style="display:flex; gap:8px;" onclick="event.stopPropagation()">
+        <button onclick="approveRequest('${p.id}')" style="flex:1; background:#16a34a; color:white; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">✅ Approve</button>
+        <button onclick="rejectRequest('${p.id}')" style="flex:1; background:#ef4444; color:white; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">❌ Reject</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  return `
+    <div style="padding:14px;">
+      <button onclick="rejectAllRequests()" style="width:100%; background:#fef2f2; color:#ef4444; border:1px solid #fecaca; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:14px; cursor:pointer;">🗑️ Reject All Unapproved</button>
+      ${cards}
+    </div>`;
+}
+
+function openRequestModal(id) {
+  const req = requests.find(r => String(r.id) === String(id));
+  if (!req) return;
+  editingPermit = req;
+  showModal(permitFormHTML("Review Request Permit", req, false, true));
+}
+
+async function approveRequest(id) {
+  try {
+    await api("approveRequest", { id });
+    await doRefresh();
+  } catch(e) { alert("Failed to approve: " + e.message); }
+}
+
+async function rejectRequest(id) {
+  try {
+    await api("rejectRequests", { ids: [id] });
+    await doRefresh();
+  } catch(e) { alert("Failed to reject: " + e.message); }
+}
+
+async function rejectAllRequests() {
+  if (!confirm("Are you sure you want to delete all pending requests?")) return;
+  try {
+    const ids = requests.map(r => r.id);
+    await api("rejectRequests", { ids });
+    await doRefresh();
+  } catch(e) { alert("Failed to clear requests: " + e.message); }
+}
+
 function renderSectionFilter() {
   const ap = activePermits();
-  
-  // 1. Pre-calculate occurrences of Order No within the SAME SHIFT once
   const orderShiftCounts = {};
   ap.forEach(p => {
     const num = String(p.orderNo || "").trim();
     const shift = String(p.shift || "").trim();
-    if (num && shift) {
-      const key = `${num}-${shift}`;
-      orderShiftCounts[key] = (orderShiftCounts[key] || 0) + 1;
-    }
+    if (num && shift) { const key = `${num}-${shift}`; orderShiftCounts[key] = (orderShiftCounts[key] || 0) + 1; }
   });
 
   const defs = [
@@ -610,22 +532,8 @@ function renderSectionFilter() {
     {key:"M2",         cls:["pill-m2","pill-m2-off"],        label:"M2", match: p => classifyOrder(p.orderNo)==="M2"},
     {key:"M3",         cls:["pill-m3","pill-m3-off"],        label:"M3", match: p => classifyOrder(p.orderNo)==="M3"},
     {key:"M4",         cls:["pill-m4","pill-m4-off"],        label:"M4", match: p => classifyOrder(p.orderNo)==="M4"},
-    {
-      key:"duplicates", 
-      cls:["pill-duplicate","pill-duplicate-off"], 
-      label:"⚠️ Duplicates", 
-      match: p => {
-        const num = String(p.orderNo || "").trim();
-        const shift = String(p.shift || "").trim();
-        return num && shift && orderShiftCounts[`${num}-${shift}`] > 1;
-      }
-    },
-    {
-      key: "CUSTOM", 
-      cls: ["pill-ma", "pill-ma-off"], 
-      label: "🔍 " + (isCustomFilterActive ? "Custom (Active)" : "Custom Filter"), 
-      match: p => evalCustomFilter(p, ap)
-    }
+    { key:"duplicates", cls:["pill-duplicate","pill-duplicate-off"], label:"⚠️ Duplicates", match: p => { const num = String(p.orderNo || "").trim(); const shift = String(p.shift || "").trim(); return num && shift && orderShiftCounts[`${num}-${shift}`] > 1; } },
+    { key: "CUSTOM", cls: ["pill-ma", "pill-ma-off"], label: "🔍 " + (isCustomFilterActive ? "Custom (Active)" : "Custom Filter"), match: p => evalCustomFilter(p, ap) }
   ];
 
   return `<div class="section-filter">${defs.map(d=>{
@@ -635,58 +543,32 @@ function renderSectionFilter() {
     return `<button class="pill ${on?d.cls[0]:d.cls[1]}" onclick="${clickAction}">${d.label} (${count})</button>`;
   }).join("")}</div>`;
 }
+
 function renderList() {
   const ap = activePermits();
-  
-  // 1. FIXED: Pre-calculate occurrences of Order No within the SAME SHIFT
   const orderShiftCounts = {};
   ap.forEach(p => {
-    const num = String(p.orderNo || "").trim();
-    const shift = String(p.shift || "").trim();
-    if (num && shift) {
-      const key = `${num}-${shift}`; // Unique shift-scoped key combo
-      orderShiftCounts[key] = (orderShiftCounts[key] || 0) + 1;
-    }
+    const num = String(p.orderNo || "").trim(); const shift = String(p.shift || "").trim();
+    if (num && shift) { const key = `${num}-${shift}`; orderShiftCounts[key] = (orderShiftCounts[key] || 0) + 1; }
   });
 
-  // Set accurate filtering conditions matching the selected filter option
   const matchRules = {
-    "ALL": p => true,
-    "Mechanical": p => p.section==="Mechanical",
-    "Electrical": p => p.section==="Electrical",
-    "Operation": p => p.section==="Operation",
-    "returned": p => p.status==="returned",
-    "extended": p => p.status==="extended",
-    "neither": p => p.status!=="returned" && p.status!=="extended",
-    "MA": p => classifyOrder(p.orderNo)==="MA",
-    "M2": p => classifyOrder(p.orderNo)==="M2",
-    "M3": p => classifyOrder(p.orderNo)==="M3",
-    "M4": p => classifyOrder(p.orderNo)==="M4",
-    "duplicates": p => {
-      const num = String(p.orderNo || "").trim();
-      const shift = String(p.shift || "").trim();
-      return num && shift && orderShiftCounts[`${num}-${shift}`] > 1;
-    },
+    "ALL": p => true, "Mechanical": p => p.section==="Mechanical", "Electrical": p => p.section==="Electrical", "Operation": p => p.section==="Operation",
+    "returned": p => p.status==="returned", "extended": p => p.status==="extended", "neither": p => p.status!=="returned" && p.status!=="extended",
+    "MA": p => classifyOrder(p.orderNo)==="MA", "M2": p => classifyOrder(p.orderNo)==="M2", "M3": p => classifyOrder(p.orderNo)==="M3", "M4": p => classifyOrder(p.orderNo)==="M4",
+    "duplicates": p => { const num = String(p.orderNo || "").trim(); const shift = String(p.shift || "").trim(); return num && shift && orderShiftCounts[`${num}-${shift}`] > 1; },
     "CUSTOM": p => evalCustomFilter(p, ap),
   };
 
   const filtered = matchRules[sectionFilter] ? ap.filter(matchRules[sectionFilter]) : ap.filter(p=>p.section===sectionFilter);
-  
   if (ap.length===0) return `${renderSectionFilter()}<div class="list"><div class="empty"><div class="empty-icon">📋</div><h3>No permits for this date/shift</h3><p>Tap + to add first permit</p></div></div>`;
   
   const cards = filtered.map(p=>{
-    const hasIso   = !!p.isolationTime;
-    const hasIssue = !!p.issueTime;
-    const returned = p.status==="returned";
-    const extended = p.status==="extended";
-    const status   = returned?"Returned":extended?"Extended":hasIssue?"Issued":hasIso?"Isolated":"Pending";
-    const stCls    = returned?"badge-green":extended?"badge-orange":hasIssue?"badge-blue":hasIso?"badge-yellow":"badge-gray";
-    const oType    = classifyOrder(p.orderNo);
-    const idx      = ap.indexOf(p)+1;
-    
-    // FIXED: Check duplicates against the compound key sequence
-    const currentNo = String(p.orderNo || "").trim();
-    const currentShift = String(p.shift || "").trim();
+    const hasIso = !!p.isolationTime; const hasIssue = !!p.issueTime; const returned = p.status==="returned"; const extended = p.status==="extended";
+    const status = returned?"Returned":extended?"Extended":hasIssue?"Issued":hasIso?"Isolated":"Pending";
+    const stCls  = returned?"badge-green":extended?"badge-orange":hasIssue?"badge-blue":hasIso?"badge-yellow":"badge-gray";
+    const oType  = classifyOrder(p.orderNo); const idx = ap.indexOf(p)+1;
+    const currentNo = String(p.orderNo || "").trim(); const currentShift = String(p.shift || "").trim();
     const isDuplicate = currentNo && currentShift && orderShiftCounts[`${currentNo}-${currentShift}`] > 1;
     const shiftCount = isDuplicate ? orderShiftCounts[`${currentNo}-${currentShift}`] : 0;
 
@@ -726,77 +608,43 @@ function renderList() {
 
 function renderReport() {
   const ap = activePermits();
-  
-  // 1. FIXED: Pre-calculate occurrences of Order No within the SAME SHIFT
   const orderShiftCounts = {};
   ap.forEach(p => {
-    const num = String(p.orderNo || "").trim();
-    const shift = String(p.shift || "").trim();
-    if (num && shift) {
-      const key = `${num}-${shift}`; // Unique key combination
-      orderShiftCounts[key] = (orderShiftCounts[key] || 0) + 1;
-    }
+    const num = String(p.orderNo || "").trim(); const shift = String(p.shift || "").trim();
+    if (num && shift) { const key = `${num}-${shift}`; orderShiftCounts[key] = (orderShiftCounts[key] || 0) + 1; }
   });
   
-  // Define priorities for Section and Order Type sorting rules
   const sectionPriority = { "Mechanical": 1, "Electrical": 2, "Operation": 3 };
   const orderTypePriority = { "MA": 1, "M3": 2, "M4": 3, "M2": 4, "M1": 5 };
   
-  // 2. FIXED: Updated matching rules to respect the shift-scoped duplicate key
   const matchRules = {
-    "ALL": p => true,
-    "Mechanical": p => p.section==="Mechanical",
-    "Electrical": p => p.section==="Electrical",
-    "Operation": p => p.section==="Operation",
-    "returned": p => p.status==="returned",
-    "extended": p => p.status==="extended",
-    "neither": p => p.status!=="returned" && p.status!=="extended",
-    "MA": p => classifyOrder(p.orderNo)==="MA",
-    "M2": p => classifyOrder(p.orderNo)==="M2",
-    "M3": p => classifyOrder(p.orderNo)==="M3",
-    "M4": p => classifyOrder(p.orderNo)==="M4",
-    "duplicates": p => {
-      const num = String(p.orderNo || "").trim();
-      const shift = String(p.shift || "").trim();
-      return num && shift && orderShiftCounts[`${num}-${shift}`] > 1;
-    },
+    "ALL": p => true, "Mechanical": p => p.section==="Mechanical", "Electrical": p => p.section==="Electrical", "Operation": p => p.section==="Operation",
+    "returned": p => p.status==="returned", "extended": p => p.status==="extended", "neither": p => p.status!=="returned" && p.status!=="extended",
+    "MA": p => classifyOrder(p.orderNo)==="MA", "M2": p => classifyOrder(p.orderNo)==="M2", "M3": p => classifyOrder(p.orderNo)==="M3", "M4": p => classifyOrder(p.orderNo)==="M4",
+    "duplicates": p => { const num = String(p.orderNo || "").trim(); const shift = String(p.shift || "").trim(); return num && shift && orderShiftCounts[`${num}-${shift}`] > 1; },
     "CUSTOM": p => evalCustomFilter(p, ap),
   };
   
-  // 3. Apply the active filter restriction BEFORE sorting
   const permitsToProcess = matchRules[sectionFilter] ? ap.filter(matchRules[sectionFilter]) : ap.filter(p=>p.section===sectionFilter);
-  
-  // 4. Sort the filtered subset sequence
   const sortedPermits = [...permitsToProcess].sort((a, b) => {
-    const secA = a.section || "";
-    const secB = b.section || "";
-    const pSecA = sectionPriority[secA] || 99;
-    const pSecB = sectionPriority[secB] || 99;
+    const secA = a.section || ""; const secB = b.section || "";
+    const pSecA = sectionPriority[secA] || 99; const pSecB = sectionPriority[secB] || 99;
     if (pSecA !== pSecB) return pSecA - pSecB;
-    const typeA = classifyOrder(a.orderNo);
-    const typeB = classifyOrder(b.orderNo);
-    const pTypeA = orderTypePriority[typeA] || 99;
-    const pTypeB = orderTypePriority[typeB] || 99;
+    const typeA = classifyOrder(a.orderNo); const typeB = classifyOrder(b.orderNo);
+    const pTypeA = orderTypePriority[typeA] || 99; const pTypeB = orderTypePriority[typeB] || 99;
     if (pTypeA !== pTypeB) return pTypeA - pTypeB;
     return ap.indexOf(a) - ap.indexOf(b);
   });
   
-  // Map over filtered/sorted array to build table report rows
   const rows = sortedPermits.map((p, i) => {
     const oType = classifyOrder(p.orderNo);
-    const currentNo = String(p.orderNo || "").trim();
-    const currentShift = String(p.shift || "").trim();
-    
-    // FIXED: Check duplicates against the compound key
+    const currentNo = String(p.orderNo || "").trim(); const currentShift = String(p.shift || "").trim();
     const isDuplicate = currentNo && currentShift && orderShiftCounts[`${currentNo}-${currentShift}`] > 1;
     const rowBgStyle = isDuplicate ? ' style="background-color: #fee2e2;"' : '';
     
     return `<tr${rowBgStyle}>
       <td>${i + 1}</td>
-      <td style="font-family:monospace;font-weight:700">
-        ${esc(p.orderNo)} 
-        ${isDuplicate ? `<span style="color:#b91c1c; font-size:10px; display:block; font-weight:bold;">⚠️ Duplicate</span>` : ''}
-      </td>
+      <td style="font-family:monospace;font-weight:700">${esc(p.orderNo)} ${isDuplicate ? `<span style="color:#b91c1c; font-size:10px; display:block; font-weight:bold;">⚠️ Duplicate</span>` : ''}</td>
       <td style="font-weight:700">${esc(oType)}</td>
       <td style="font-weight:700; text-align:center;">${esc(p.shift || "—")}</td>
       <td>${esc(p.section || "")}</td>
@@ -813,7 +661,6 @@ function renderReport() {
     </tr>`;
   }).join("");
   
-  // Visual label badge for current filter context in the report header
   const filterLabel = sectionFilter === "ALL" ? "All Records" : `Filtered: ${sectionFilter}`;
   
   return `<div class="report">
@@ -830,10 +677,8 @@ function renderReport() {
     <div class="report-table-wrap">
       <table id="report-table">
         <thead><tr>
-          <th>#</th><th>Order No</th><th>Type</th><th>Shift</th><th>Section</th>
-          <th>Job Description</th><th>Receiver</th><th>Contact</th>
-          <th>Isolation</th><th>Issue</th><th>Extended</th><th>Returned</th><th>Status</th>
-          <th>Permit</th><th>By</th>
+          <th>#</th><th>Order No</th><th>Type</th><th>Shift</th><th>Section</th><th>Job Description</th><th>Receiver</th><th>Contact</th>
+          <th>Isolation</th><th>Issue</th><th>Extended</th><th>Returned</th><th>Status</th><th>Permit</th><th>By</th>
         </tr></thead>
         <tbody>${rows || `<tr><td colspan="15" style="text-align:center;color:#94a3b8;padding:20px">No matching permits for filter "${sectionFilter}"</td></tr>`}</tbody>
       </table>
@@ -841,45 +686,21 @@ function renderReport() {
     <p class="report-hint">📸 Screenshot · or use Export / Share above</p>
   </div>`;
 }
-function renderConfig() {
-  return `
-    <div style="background:#1e3a5f;padding:48px 16px 20px;color:white">
-      <div style="font-size:10px;letter-spacing:2px;color:#93c5fd;font-weight:700;text-transform:uppercase">ARS-2</div>
-      <div style="font-size:22px;font-weight:800;margin-top:4px">Permit Tracker</div>
-    </div>
-    <div class="config-screen">
-      <h2>First Time Setup</h2>
-      <p>Paste your Google Apps Script URL below. Only needed once per phone.</p>
-      <div class="hint-box">📌 Apps Script → Deploy → Manage Deployments → copy Web App URL</div>
-      <div class="field">
-        <label>Apps Script Web App URL</label>
-        <textarea id="url-input" style="font-size:13px;height:80px" placeholder="https://script.google.com/macros/s/.../exec"></textarea>
-      </div>
-      <button class="btn-primary" onclick="saveUrl()">Save & Connect</button>
-    </div>`;
-}
+
 function renderUnaccounted() {
   const prev = getPreviousShift(meta.date, meta.shift);
   if (!prev) return `<div class="empty"><h3>Cannot calculate previous shift.</h3></div>`;
-  // Calculate the Tally metrics
   const prevPermits = permits.filter(p => p.shiftDate === prev.date && p.shift === prev.shift);
   const currentShiftPermits = activePermits();
-  let tallyReturned = 0;
-  let tallyExtended = 0;
-  let unaccountedList = [];
+  let tallyReturned = 0; let tallyExtended = 0; let unaccountedList = [];
   prevPermits.forEach(p => {
-    if (p.status === "returned") {
-      tallyReturned++;
-    } else {
+    if (p.status === "returned") { tallyReturned++; } 
+    else {
       const isExtended = currentShiftPermits.some(currP => currP.orderNo === p.orderNo);
-      if (isExtended) {
-        tallyExtended++;
-      } else {
-        unaccountedList.push(p);
-      }
+      if (isExtended) { tallyExtended++; } else { unaccountedList.push(p); }
     }
   });
-  // Build the rows using the exact unaccounted list
+  
   const rows = unaccountedList.map((p, i) => {
     return `<tr onclick="extendUnaccountedPermit('${esc(p.id)}')" style="cursor:pointer; background: #fff1f2;">
       <td>${i + 1}</td>
@@ -891,6 +712,7 @@ function renderUnaccounted() {
       <td><span class="badge badge-red">Missing</span></td>
     </tr>`;
   }).join("");
+  
   return `<div class="report">
     <div class="report-header" style="background: #1e293b; padding-bottom: 20px;">
       <h2>SHIFT HANDOVER AUDIT</h2>
@@ -898,7 +720,6 @@ function renderUnaccounted() {
       <div class="report-actions">
        <button id="capture-audit-btn" onclick="captureAuditImage()" style="background:#10b981; color:white;">📸 Save Image</button>
       </div>
-      <!-- SIMPLE TALLY DASHBOARD -->
       <div style="display: flex; gap:8px; margin-top: 16px;">
          <div style="flex:1; background:rgba(255,255,255,0.1); padding:10px 4px; border-radius:8px; text-align:center;">
             <div style="font-size:20px; font-weight:bold; color:#f8fafc">${prevPermits.length}</div>
@@ -920,41 +741,25 @@ function renderUnaccounted() {
     </div>
     <div class="report-table-wrap">
       <table id="unaccounted-table">
-        <thead>
-          <tr>
-            <th>#</th><th>Order No</th><th>Job Description</th><th>Section</th>
-            <th>Receiver / Contact</th><th>Prev Issue</th><th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows || `<tr><td colspan="6" style="text-align:center;color:#16a34a;padding:30px;font-weight:bold;">✅ All handover permits accounted for.</td></tr>`}
-        </tbody>
+        <thead><tr><th>#</th><th>Order No</th><th>Job Description</th><th>Section</th><th>Receiver / Contact</th><th>Prev Issue</th><th>Status</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="6" style="text-align:center;color:#16a34a;padding:30px;font-weight:bold;">✅ All handover permits accounted for.</td></tr>`}</tbody>
       </table>
     </div>
     <p class="report-hint">Tap any missing permit to pull it into your shift as "Extended"</p>
   </div>`;
 }
+
 function renderRangeAuditView() {
   if (!rangeStartDate) rangeStartDate = meta.date;
   if (!rangeEndDate) rangeEndDate = meta.date;
-  
-  // Get the unreturned list for the current view cards
   const rangeMissing = getRangeUnreturnedPermits();
-  
-  // Initialize search input value preservation
   const searchInputEl = document.getElementById("range-search-order");
   const searchQuery = searchInputEl ? searchInputEl.value.trim() : "";
 
-  let html = `
-   <div id="range-audit-container" style="background: #f1f5f9; padding-bottom: 20px;">
+  let html = `<div id="range-audit-container" style="background: #f1f5f9; padding-bottom: 20px;">
     <div id="range-audit-selectors" style="padding: 14px; background: white; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
-      <h3 style="font-size: 14px; font-weight: 800; color: #1e3a5f; margin-bottom: 4px; text-transform: uppercase;">
-        🕒 Range Audit Tracker
-      </h3>
-      <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
-        Track unreturned permits or search full historical lifecycles across shifts.
-      </p>
-      
+      <h3 style="font-size: 14px; font-weight: 800; color: #1e3a5f; margin-bottom: 4px; text-transform: uppercase;">🕒 Range Audit Tracker</h3>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Track unreturned permits or search full historical lifecycles across shifts.</p>
       <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
         <div style="flex: 1; min-width: 140px;">
           <label style="font-size: 10px; font-weight:700; color:#64748b; display:block; margin-bottom:2px;">FROM DATE (DD/MM/YYYY)</label>
@@ -963,9 +768,7 @@ function renderRangeAuditView() {
         <div style="width: 80px;">
           <label style="font-size: 10px; font-weight:700; color:#64748b; display:block; margin-bottom:2px;">SHIFT</label>
           <select id="range-start-shift" onchange="rangeStartShift=this.value" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
-            <option value="A" ${rangeStartShift==="A"?'selected':''}>A</option>
-            <option value="B" ${rangeStartShift==="B"?'selected':''}>B</option>
-            <option value="C" ${rangeStartShift==="C"?'selected':''}>C</option>
+            <option value="A" ${rangeStartShift==="A"?'selected':''}>A</option><option value="B" ${rangeStartShift==="B"?'selected':''}>B</option><option value="C" ${rangeStartShift==="C"?'selected':''}>C</option>
           </select>
         </div>
       </div>
@@ -977,13 +780,10 @@ function renderRangeAuditView() {
         <div style="width: 80px;">
           <label style="font-size: 10px; font-weight:700; color:#64748b; display:block; margin-bottom:2px;">SHIFT</label>
           <select id="range-end-shift" onchange="rangeEndShift=this.value" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
-            <option value="A" ${rangeEndShift==="A"?'selected':''}>A</option>
-            <option value="B" ${rangeEndShift==="B"?'selected':''}>B</option>
-            <option value="C" ${rangeEndShift==="C"?'selected':''}>C</option>
+            <option value="A" ${rangeEndShift==="A"?'selected':''}>A</option><option value="B" ${rangeEndShift==="B"?'selected':''}>B</option><option value="C" ${rangeEndShift==="C"?'selected':''}>C</option>
           </select>
         </div>
       </div>
-      
       <div style="margin-bottom: 14px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
         <label style="font-size: 10px; font-weight:800; color:#1e3a5f; display:block; margin-bottom:4px; text-transform:uppercase;">🔍 Live Order Number Search</label>
         <div style="display:flex; gap:6px;">
@@ -991,41 +791,28 @@ function renderRangeAuditView() {
           <button onclick="applyRangeAudit()" style="background:#475569; color:white; border:none; padding:0 14px; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer;">Search</button>
         </div>
       </div>
-
       <button onclick="applyRangeAudit()" style="width:100%; background:#2563eb; color:white; border:none; padding:10px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">
         🔍 Run Range Handover Audit (${rangeMissing.length} Unreturned)
       </button>
     </div>
-    
     <div class="report-actions" style="padding: 0 14px; margin-bottom: 12px; display: flex; gap: 8px;">
       <button class="btn-excel" onclick="exportRangeAuditExcel()" style="flex:1;">📥 Export Unreturned</button>
-      <button class="btn-share" onclick="dumpFullRangeDataCSV()" style="flex:1; background: #7c3aed; color: white;">📊 Export Full Range (CSV)</button>
+      <button class="btn-share" onclick="dumpFullRangeDataCSV()" style="flex:1; background: #7c3aed; color: white;">📊 Export Full Range</button>
       <button id="range-capture-btn" onclick="captureRangeAuditImage()" style="background:#10b981; color:white; padding:11px; border-radius:10px; border:none; font-size:13px; font-weight:700; cursor:pointer; flex:1;">📸 Save Image</button>
     </div>
-    
-    <div style="padding: 0 14px;">
-  `;
+    <div style="padding: 0 14px;">`;
 
-  // IF SEARCH IS ACTIVE: Display targeted historical timeline lifecycle track
   if (searchQuery) {
     const searchResults = permits.filter(p => String(p.orderNo || "").trim().includes(searchQuery));
-    
     html += `<h4 style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color:#1e3a5f;">🔍 Lifecycle History Entries for "${esc(searchQuery)}" (${searchResults.length} logs found):</h4>`;
-    
     if (searchResults.length === 0) {
       html += `<div class="card" style="text-align:center; padding: 20px; color:#94a3b8; background:white; border-radius:8px; border:1px dashed #cbd5e1;">❌ No historical records match that order entry.</div>`;
     } else {
-      // Sort matching search queries chronologically 
       searchResults.sort((a,b) => getShiftScore(a.shiftDate, a.shift) - getShiftScore(b.shiftDate, b.shift));
-      
       searchResults.forEach((p, index) => {
-        const returned = p.status === "returned";
-        const extended = p.status === "extended";
-        const stCls = returned ? "badge-green" : extended ? "badge-orange" : "badge-blue";
-        
-        html += `
-          <div class="card" style="background:white; padding:12px; margin-bottom:8px; border-radius:8px; border-left: 4px solid #3b82f6;">
-            <div class="card-top" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        const returned = p.status === "returned"; const extended = p.status === "extended"; const stCls = returned ? "badge-green" : extended ? "badge-orange" : "badge-blue";
+        html += `<div class="card" style="background:white; padding:12px; margin-bottom:8px; border-radius:8px; border-left: 4px solid #3b82f6;">
+            <div class="card-top" style="display:flex; justify-space-between; align-items:center; margin-bottom:4px;">
               <span style="font-size:11px; font-weight:bold; color:#64748b;">Log #${index + 1}</span>
               <span class="card-order" style="font-weight:700; font-family:monospace;">${esc(p.orderNo)}</span>
               <span class="badge ${stCls}" style="margin-left:auto;">${esc((p.status || "Issued").toUpperCase())}</span>
@@ -1041,18 +828,12 @@ function renderRangeAuditView() {
       });
     }
   } else {
-    // DEFAULT VIEW: Show target unreturned window logs
-    html += `
-      <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color:#475569;">
-        Unreturned Handover Permits (${rangeStartDate} to ${rangeEndDate}):
-      </h4>
-    `;
+    html += `<h4 style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color:#475569;">Unreturned Handover Permits (${rangeStartDate} to ${rangeEndDate}):</h4>`;
     if (rangeMissing.length === 0) {
       html += `<div class="card" style="text-align:center; padding: 20px; color:#94a3b8; background:white; border-radius:8px; border:1px dashed #cbd5e1;">✅ No unreturned permits found matching this timeframe window.</div>`;
     } else {
       rangeMissing.forEach(p => {
-        html += `
-          <div class="card" style="border-left: 4px solid #ef4444; background:white; padding:12px; margin-bottom:8px; border-radius:8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        html += `<div class="card" style="border-left: 4px solid #ef4444; background:white; padding:12px; margin-bottom:8px; border-radius:8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
             <div class="card-top" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
               <span class="card-order" style="font-weight:700; color:#1e293b;">${esc(p.orderNo)}</span>
               <span class="badge badge-orange" style="background:#ffedf5; color:#b91c1c; padding:2px 6px; font-size:10px; border-radius:4px; font-weight:700; margin-left:auto;">${esc(p.lastStatus.toUpperCase())}</span>
@@ -1066,431 +847,170 @@ function renderRangeAuditView() {
       });
     }
   }
-  
   html += `</div></div>`;
   return html;
 }
 
 function applyRangeAudit() {
-  const startD = document.getElementById("range-start-date");
-  const startS = document.getElementById("range-start-shift");
-  const endD = document.getElementById("range-end-date");
-  const endS = document.getElementById("range-end-shift");
-  
-  if (startD) rangeStartDate = startD.value.trim();
-  if (startS) rangeStartShift = startS.value;
-  if (endD) rangeEndDate = endD.value.trim();
-  if (endS) rangeEndShift = endS.value;
-  
+  const startD = document.getElementById("range-start-date"); const startS = document.getElementById("range-start-shift");
+  const endD = document.getElementById("range-end-date"); const endS = document.getElementById("range-end-shift");
+  if (startD) rangeStartDate = startD.value.trim(); if (startS) rangeStartShift = startS.value;
+  if (endD) rangeEndDate = endD.value.trim(); if (endS) rangeEndShift = endS.value;
   render();
 }
-// ══════════════════════════════════════
-//  EXPORT & SHARE
-// ══════════════════════════════════════
-function dumpFullRangeDataCSV() {
-  const startScore = getShiftScore(rangeStartDate, rangeStartShift);
-  const endScore = getShiftScore(rangeEndDate, rangeEndShift);
-  
-  if (startScore > endScore) {
-    alert("Invalid Date Range Selection Window!");
-    return;
-  }
 
+function dumpFullRangeDataCSV() {
+  const startScore = getShiftScore(rangeStartDate, rangeStartShift); const endScore = getShiftScore(rangeEndDate, rangeEndShift);
+  if (startScore > endScore) { alert("Invalid Date Range Selection Window!"); return; }
   const rangePermits = permits.filter(p => {
-    const d = String(p.shiftDate || "").trim();
-    const s = String(p.shift || "").trim();
+    const d = String(p.shiftDate || "").trim(); const s = String(p.shift || "").trim();
     if (!d || !s) return false;
     const itemScore = getShiftScore(d, s);
     return itemScore >= startScore && itemScore <= endScore;
   });
-
-  if (rangePermits.length === 0) {
-    alert("No records found within this timeframe.");
-    return;
-  }
-
+  if (rangePermits.length === 0) { alert("No records found within this timeframe."); return; }
   rangePermits.sort((a, b) => getShiftScore(a.shiftDate, a.shift) - getShiftScore(b.shiftDate, b.shift));
-
   const headers = ["System ID", "Shift Date", "Shift", "Order No", "Type", "Section", "Job Description", "Receiver", "Contact No", "Isolation Time", "Issue Time", "Extended Time", "Returned Time", "Permit Structure", "Status", "Issued By"];
-  
-  const rows = rangePermits.map(p => [
-    p.id || "",
-    p.shiftDate || "",
-    p.shift || "",
-    p.orderNo || "",
-    classifyOrder(p.orderNo),
-    p.section || "",
-    p.jobDescription || "",
-    p.receiver || "",
-    p.contactNo || "",
-    p.isolationTime || "—",
-    p.issueTime || "—",
-    p.extendedTime || "—",
-    p.returnedTime || "—",
-    (p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated",
-    p.status || "Issued",
-    p.issuer || ""
-  ]);
-
+  const rows = rangePermits.map(p => [ p.id || "", p.shiftDate || "", p.shift || "", p.orderNo || "", classifyOrder(p.orderNo), p.section || "", p.jobDescription || "", p.receiver || "", p.contactNo || "", p.isolationTime || "—", p.issueTime || "—", p.extendedTime || "—", p.returnedTime || "—", (p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated", p.status || "Issued", p.issuer || "" ]);
   const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `Full_CSV_Dump_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.csv`;
-  
-  document.body.appendChild(a);
-  a.click();
-  
-  // Clean up immediately exactly like your working exportExcel function
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 100);
+  const a = document.createElement("a"); a.href = url; a.download = `Full_CSV_Dump_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.csv`;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
 
-// Function to export Range Audit cards data to a downloadable CSV/Excel file structure
 function exportRangeAuditExcel() {
   const rangeMissing = getRangeUnreturnedPermits();
-  if (rangeMissing.length === 0) {
-    alert("No unreturned range data to export.");
-    return;
-  }
-  
+  if (rangeMissing.length === 0) { alert("No unreturned range data to export."); return; }
   const headers = ["Order No", "Job Description", "Section", "Receiver", "Contact No", "Last Seen Date", "Last Seen Shift", "Last Status"];
-  const rows = rangeMissing.map(p => [
-    p.orderNo || "",
-    p.jobDescription || "",
-    p.section || "",
-    p.receiver || "",
-    p.contactNo || "",
-    p.lastSeenDate || "",
-    p.lastSeenShift || "",
-    p.lastStatus || "Issued"
-  ]);
-
+  const rows = rangeMissing.map(p => [ p.orderNo || "", p.jobDescription || "", p.section || "", p.receiver || "", p.contactNo || "", p.lastSeenDate || "", p.lastSeenShift || "", p.lastStatus || "Issued" ]);
   const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `Range_Audit_Unreturned_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.csv`;
-  
-  document.body.appendChild(a);
-  a.click();
-  
-  // Clean up immediately exactly like your working exportExcel function
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 100);
+  const a = document.createElement("a"); a.href = url; a.download = `Range_Audit_Unreturned_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.csv`;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
+
 async function captureRangeAuditImage() {
-    // 1. Target the main Range-Audit container wrapper specifically
     const reportContainer = document.getElementById("range-audit-container");
-    // Target the specific wrapper where your button sits inside the range audit container
     const btn = document.getElementById('range-capture-btn');
     const actions = btn ? btn.parentElement : null;
-    // NEW: Target the date/shift selectors block element container
     const selectors = document.getElementById('range-audit-selectors');
-    if (!reportContainer) {
-        alert("Range Audit components not found.");
-        return;
-    }
+    if (!reportContainer) { alert("Range Audit components not found."); return; }
     const originalText = btn ? btn.innerText : "";
-    if (btn) {
-        btn.innerText = "⏳ Capturing View...";
-        btn.disabled = true;
-    }
-    // Save original visibility states for layout restoration
-    const oldActionsDisplay = actions ? actions.style.display : "";
-    const oldSelectorsDisplay = selectors ? selectors.style.display : "";
+    if (btn) { btn.innerText = "⏳ Capturing View..."; btn.disabled = true; }
+    const oldActionsDisplay = actions ? actions.style.display : ""; const oldSelectorsDisplay = selectors ? selectors.style.display : "";
     try {
-        // Hide both the action buttons AND the date picker inputs panel
-        if (actions) actions.style.display = "none";
-        if (selectors) selectors.style.display = "none";
-        // Capture the remaining parts of the range audit wrapper (the cards list)
-        const canvas = await html2canvas(reportContainer, {
-            scale: 2, // Keeps text looking sharp
-            backgroundColor: '#f1f5f9', // Matches app background
-            useCORS: true
-        });
-        // Trigger file download using the preview state variables
+        if (actions) actions.style.display = "none"; if (selectors) selectors.style.display = "none";
+        const canvas = await html2canvas(reportContainer, { scale: 2, backgroundColor: '#f1f5f9', useCORS: true });
         const imageUri = canvas.toDataURL("image/png");
-        // Grab values dynamically from your range state variables
-        const rStart = (typeof rangeStartDate !== 'undefined') ? rangeStartDate : 'Start';
-        const rEnd = (typeof rangeEndDate !== 'undefined') ? rangeEndDate : 'End';
+        const rStart = (typeof rangeStartDate !== 'undefined') ? rangeStartDate : 'Start'; const rEnd = (typeof rangeEndDate !== 'undefined') ? rangeEndDate : 'End';
         const fileName = `Range_Audit_${rStart.replace(/\//g, "-")}_to_${rEnd.replace(/\//g, "-")}.png`;
-        // Check specifically for iPhone/iPad environments
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         if (isIOS) {
             const newWindow = window.open();
             if (newWindow) {
-                newWindow.document.write(`
-                    <html>
-                        <head>
-                            <title>Range Audit Preview</title>
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                            <style>
-                                body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; }
-                                img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-                                .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 14px; }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div>
-                            <img src="${imageUri}" alt="Range Audit Report" />
-                        </body>
-                    </html>
-                `);
+                newWindow.document.write(`<html><head><title>Range Audit Preview</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; } img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); } .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 14px; }</style></head><body><div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div><img src="${imageUri}" alt="Range Audit Report" /></body></html>`);
                 newWindow.document.close();
-            } else {
-                alert("Pop-up blocked! Please allow pop-ups for this site to view/save the report image.");
-            }
+            } else { alert("Pop-up blocked! Please allow pop-ups for this site to view/save the report image."); }
         } else {
-            const downloadLink = document.createElement("a");
-            downloadLink.download = fileName;
-            downloadLink.href = imageUri;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
+            const downloadLink = document.createElement("a"); downloadLink.download = fileName; downloadLink.href = imageUri;
+            document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
         }
-    } catch (error) {
-        console.error(error);
-        alert("Capture failed. Try taking a normal screenshot.");
-    } finally {
-        // Restore all functional interface parts back to visible states on layout
-        if (actions) actions.style.display = oldActionsDisplay;
-        if (selectors) selectors.style.display = oldSelectorsDisplay;
-        if (btn) {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        }
+    } catch (error) { console.error(error); alert("Capture failed. Try taking a normal screenshot."); } 
+    finally {
+        if (actions) actions.style.display = oldActionsDisplay; if (selectors) selectors.style.display = oldSelectorsDisplay;
+        if (btn) { btn.innerText = originalText; btn.disabled = false; }
     }
 }
+
 async function captureAuditImage() {
-    // 1. Target the elements inside the renderUnaccounted / Audit structure
-    const reportContainer = document.querySelector('.report'); 
-    const tableWrap = document.querySelector('.report-table-wrap');
-    // Finds the table inside your unaccounted layout
+    const reportContainer = document.querySelector('.report'); const tableWrap = document.querySelector('.report-table-wrap');
     const table = document.getElementById('unaccounted-table') || document.querySelector('.report-table-wrap table'); 
-    // Target the specific wrapper where your new Save Image button sits
-    const actions = document.getElementById('capture-audit-btn')?.parentElement;
-    const hint = document.querySelector('.report-hint');
-    if (!reportContainer || !tableWrap || !table) {
-        alert("Audit components not found.");
-        return;
-    }
-    const btn = document.getElementById('capture-audit-btn');
-    const originalText = btn ? btn.innerText : "";
-    if (btn) {
-        btn.innerText = "⏳ Capturing Full View...";
-        btn.disabled = true;
-    }
-    // Save original styles for layout restoration
-    const oldWidth = tableWrap.style.width;
-    const oldOverflow = tableWrap.style.overflow;
-    const oldActionsDisplay = actions ? actions.style.display : "";
-    const oldHintDisplay = hint ? hint.style.display : ""; // Preserved layout structure
+    const actions = document.getElementById('capture-audit-btn')?.parentElement; const hint = document.querySelector('.report-hint');
+    if (!reportContainer || !tableWrap || !table) { alert("Audit components not found."); return; }
+    const btn = document.getElementById('capture-audit-btn'); const originalText = btn ? btn.innerText : "";
+    if (btn) { btn.innerText = "⏳ Capturing Full View..."; btn.disabled = true; }
+    const oldWidth = tableWrap.style.width; const oldOverflow = tableWrap.style.overflow;
+    const oldActionsDisplay = actions ? actions.style.display : ""; const oldHintDisplay = hint ? hint.style.display : "";
     try {
-        // Hide the green button row so it doesn't appear in the captured image
-        if (actions) actions.style.display = "none";
-        if (hint) hint.style.display = "none";
-        // Force the table container to expand completely to its maximum scrollable width
-        tableWrap.style.width = table.scrollWidth + "px";
-        tableWrap.style.overflow = "visible";
-        // Capture the entire report wrapper container
-        const canvas = await html2canvas(reportContainer, {
-            scale: 2, // Keeps text looking sharp
-            backgroundColor: '#f1f5f9', // Matches your app's background card color
-            windowWidth: table.scrollWidth + 32, // Accommodate the full table width matrix + padding
-            useCORS: true
-        });
-        // Trigger file download using the preview state variables
+        if (actions) actions.style.display = "none"; if (hint) hint.style.display = "none";
+        tableWrap.style.width = table.scrollWidth + "px"; tableWrap.style.overflow = "visible";
+        const canvas = await html2canvas(reportContainer, { scale: 2, backgroundColor: '#f1f5f9', windowWidth: table.scrollWidth + 32, useCORS: true });
         const imageUri = canvas.toDataURL("image/png");
-        // Grab values dynamically from your prev object seen in your render code
-        const auditDate = (typeof prev !== 'undefined' && prev.date) ? prev.date : 'Audit';
-        const auditShift = (typeof prev !== 'undefined' && prev.shift) ? prev.shift : 'Shift';
+        const prev = getPreviousShift(meta.date, meta.shift);
+        const auditDate = (typeof prev !== 'undefined' && prev.date) ? prev.date : 'Audit'; const auditShift = (typeof prev !== 'undefined' && prev.shift) ? prev.shift : 'Shift';
         const fileName = `Audit_Report_${auditDate.replace(/\//g, "-")}_Shift_${auditShift}.png`;
-        // Check specifically for iPhone/iPad environments
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         if (isIOS) {
-            // Safe execution branch for iOS Chrome/Safari updates
             const newWindow = window.open();
             if (newWindow) {
-                newWindow.document.write(`
-                    <html>
-                        <head>
-                            <title>Audit Report Preview</title>
-                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                            <style>
-                                body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; }
-                                img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-                                .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 14px; }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div>
-                            <img src="${imageUri}" alt="Audit Report" />
-                        </body>
-                    </html>
-                `);
+                newWindow.document.write(`<html><head><title>Audit Report Preview</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; } img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); } .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 14px; }</style></head><body><div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div><img src="${imageUri}" alt="Audit Report" /></body></html>`);
                 newWindow.document.close();
-            } else {
-                alert("Pop-up blocked! Please allow pop-ups for this site to view/save the report image.");
-            }
+            } else { alert("Pop-up blocked! Please allow pop-ups for this site to view/save the report image."); }
         } else {
-            // Kept your exact legacy desktop/Android download route completely intact
-            const downloadLink = document.createElement("a");
-            downloadLink.download = fileName;
-            downloadLink.href = imageUri;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
+            const downloadLink = document.createElement("a"); downloadLink.download = fileName; downloadLink.href = imageUri;
+            document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
         }
-    } catch (error) {
-        console.error(error);
-        alert("Capture failed. Try taking a normal screenshot.");
-    } finally {
-        // Reset all original structural layouts and visibility states back to normal
-        tableWrap.style.width = oldWidth;
-        tableWrap.style.overflow = oldOverflow;
-        if (actions) actions.style.display = oldActionsDisplay;
-        if (hint) hint.style.display = oldHintDisplay; // Balanced layout cleanup
-        if (btn) {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        }
+    } catch (error) { console.error(error); alert("Capture failed. Try taking a normal screenshot."); } 
+    finally {
+        tableWrap.style.width = oldWidth; tableWrap.style.overflow = oldOverflow;
+        if (actions) actions.style.display = oldActionsDisplay; if (hint) hint.style.display = oldHintDisplay;
+        if (btn) { btn.innerText = originalText; btn.disabled = false; }
     }
 }
+
 async function captureReportImage() {
-  const reportContainer = document.querySelector('.report');
-  const tableWrap = document.querySelector('.report-table-wrap');
-  const table = document.getElementById('report-table');
-  const actions = document.querySelector('.report-actions');
-  const hint = document.querySelector('.report-hint');
-  if (!reportContainer || !tableWrap || !table) { 
-    alert("Report components not found."); 
-    return; 
-  }
-  const btn = document.getElementById('capture-btn');
-  const originalText = btn.innerText;
-  btn.innerText = "⏳ Capturing Full View..."; 
-  btn.disabled = true;
-  // Save original structural and visibility styles
-  const oldWidth = tableWrap.style.width;
-  const oldOverflow = tableWrap.style.overflow;
-  const oldActionsDisplay = actions ? actions.style.display : "";
-  const oldHintDisplay = hint ? hint.style.display : "";
+  const reportContainer = document.querySelector('.report'); const tableWrap = document.querySelector('.report-table-wrap');
+  const table = document.getElementById('report-table'); const actions = document.querySelector('.report-actions'); const hint = document.querySelector('.report-hint');
+  if (!reportContainer || !tableWrap || !table) { alert("Report components not found."); return; }
+  const btn = document.getElementById('capture-btn'); const originalText = btn.innerText;
+  btn.innerText = "⏳ Capturing Full View..."; btn.disabled = true;
+  const oldWidth = tableWrap.style.width; const oldOverflow = tableWrap.style.overflow;
+  const oldActionsDisplay = actions ? actions.style.display : ""; const oldHintDisplay = hint ? hint.style.display : "";
   try {
-    // 1. Hide interactive elements so they don't show up in the image
-    if (actions) actions.style.display = "none";
-    if (hint) hint.style.display = "none";
-    // 2. FORCE the table container to expand completely to its maximum width
-    tableWrap.style.width = table.scrollWidth + "px";
-    tableWrap.style.overflow = "visible";
-    // 3. Capture the entire report wrapper container
-    const canvas = await html2canvas(reportContainer, { 
-      scale: 2,                       // Keeps text looking sharp
-      backgroundColor: '#f1f5f9',     // Matches app body background color
-      windowWidth: table.scrollWidth + 32, // Accommodate the full table width matrix + padding
-      useCORS: true
-    });
-    // Trigger file download
-    const imageUri = canvas.toDataURL("image/png");
-    const fileName = `Permit_Report_${meta.date.replace(/\//g, "-")}_Shift_${meta.shift}.png`;
-    // Check if the current device is an iPhone or iPad running Mobile Chrome/Safari
+    if (actions) actions.style.display = "none"; if (hint) hint.style.display = "none";
+    tableWrap.style.width = table.scrollWidth + "px"; tableWrap.style.overflow = "visible";
+    const canvas = await html2canvas(reportContainer, { scale: 2, backgroundColor: '#f1f5f9', windowWidth: table.scrollWidth + 32, useCORS: true });
+    const imageUri = canvas.toDataURL("image/png"); const fileName = `Permit_Report_${meta.date.replace(/\//g, "-")}_Shift_${meta.shift}.png`;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     if (isIOS) {
-      // --- iOS CHROME WORKAROUND ---
-      // Open the massive Base64 data string in a clean viewport tab for manual long-press save
       const newWindow = window.open();
       if (newWindow) {
-        newWindow.document.write(`
-          <html>
-            <head>
-              <title>Permit Report Preview</title>
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; }
-                img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-                .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 14px; }
-              </style>
-            </head>
-            <body>
-              <div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div>
-              <img src="${imageUri}" alt="Report Image" />
-            </body>
-          </html>
-        `);
+        newWindow.document.write(`<html><head><title>Permit Report Preview</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; } img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); } .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 14px; }</style></head><body><div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div><img src="${imageUri}" alt="Report Image" /></body></html>`);
         newWindow.document.close();
-      } else {
-        alert("Pop-up blocked! Please allow pop-ups for this site to view/save the generated image.");
-      }
+      } else { alert("Pop-up blocked! Please allow pop-ups for this site to view/save the generated image."); }
     } else {
-      // --- STANDARD DESKTOP / ANDROID DOWNLOAD ---
-      const downloadLink = document.createElement("a");
-      downloadLink.download = fileName;
-      downloadLink.href = imageUri;
-      document.body.appendChild(downloadLink); 
-      downloadLink.click(); 
-      document.body.removeChild(downloadLink);
+      const downloadLink = document.createElement("a"); downloadLink.download = fileName; downloadLink.href = imageUri;
+      document.body.appendChild(downloadLink); downloadLink.click(); document.body.removeChild(downloadLink);
     }
-  } catch (error) { 
-    console.error(error);
-    alert("Capture failed. Try taking a normal screenshot."); 
-  } finally { 
-    // Reset all original structural layouts and view states back to normal
-    tableWrap.style.width = oldWidth;
-    tableWrap.style.overflow = oldOverflow;
-    if (actions) actions.style.display = oldActionsDisplay;
-    if (hint) hint.style.display = oldHintDisplay;
-    btn.innerText = originalText; 
-    btn.disabled = false; 
+  } catch (error) { console.error(error); alert("Capture failed. Try taking a normal screenshot."); } 
+  finally { 
+    tableWrap.style.width = oldWidth; tableWrap.style.overflow = oldOverflow;
+    if (actions) actions.style.display = oldActionsDisplay; if (hint) hint.style.display = oldHintDisplay;
+    btn.innerText = originalText; btn.disabled = false; 
   }
 }
+
 function exportExcel() {
   const headers = ["#","Order No","Type","Section","Job Description","Receiver","Contact","Isolation Time","Issue Time","Extended Time","Returned Time","Permit Type","Status","Issued By"];
   const ap = activePermits();
-  
-  // 1. FIXED: Pre-calculate occurrences of Order No within the SAME SHIFT
   const orderShiftCounts = {};
   ap.forEach(p => {
-    const num = String(p.orderNo || "").trim();
-    const shift = String(p.shift || "").trim();
-    if (num && shift) {
-      const key = `${num}-${shift}`;
-      orderShiftCounts[key] = (orderShiftCounts[key] || 0) + 1;
-    }
+    const num = String(p.orderNo || "").trim(); const shift = String(p.shift || "").trim();
+    if (num && shift) { const key = `${num}-${shift}`; orderShiftCounts[key] = (orderShiftCounts[key] || 0) + 1; }
   });
-  
   const sectionPriority = { "Mechanical": 1, "Electrical": 2, "Operation": 3 };
   const orderTypePriority = { "MA": 1, "M3": 2, "M4": 3, "M2": 4, "M1": 5 };
-  
-  // 2. FIXED: Updated matching rules to use the shift-scoped duplicate rule
   const matchRules = {
-    "ALL": p => true,
-    "Mechanical": p => p.section==="Mechanical",
-    "Electrical": p => p.section==="Electrical",
-    "Operation": p => p.section==="Operation",
-    "returned": p => p.status==="returned",
-    "extended": p => p.status==="extended",
-    "neither": p => p.status!=="returned" && p.status!=="extended",
-    "MA": p => classifyOrder(p.orderNo)==="MA",
-    "M2": p => classifyOrder(p.orderNo)==="M2",
-    "M3": p => classifyOrder(p.orderNo)==="M3",
-    "M4": p => classifyOrder(p.orderNo)==="M4",
-    "duplicates": p => {
-      const num = String(p.orderNo || "").trim();
-      const shift = String(p.shift || "").trim();
-      return num && shift && orderShiftCounts[`${num}-${shift}`] > 1;
-    }
+    "ALL": p => true, "Mechanical": p => p.section==="Mechanical", "Electrical": p => p.section==="Electrical", "Operation": p => p.section==="Operation",
+    "returned": p => p.status==="returned", "extended": p => p.status==="extended", "neither": p => p.status!=="returned" && p.status!=="extended",
+    "MA": p => classifyOrder(p.orderNo)==="MA", "M2": p => classifyOrder(p.orderNo)==="M2", "M3": p => classifyOrder(p.orderNo)==="M3", "M4": p => classifyOrder(p.orderNo)==="M4",
+    "duplicates": p => { const num = String(p.orderNo || "").trim(); const shift = String(p.shift || "").trim(); return num && shift && orderShiftCounts[`${num}-${shift}`] > 1; }
   };
-  
   const permitsToProcess = matchRules[sectionFilter] ? ap.filter(matchRules[sectionFilter]) : ap.filter(p=>p.section===sectionFilter);
-  
   const sortedPermits = [...permitsToProcess].sort((a, b) => {
     const secA = a.section || ""; const secB = b.section || "";
     const pSecA = sectionPriority[secA] || 99; const pSecB = sectionPriority[secB] || 99;
@@ -1500,68 +1020,33 @@ function exportExcel() {
     if (pTypeA !== pTypeB) return pTypeA - pTypeB;
     return ap.indexOf(a) - ap.indexOf(b);
   });
-  
   const rows = sortedPermits.map((p, i) => {
-    const currentNo = String(p.orderNo || "").trim();
-    const currentShift = String(p.shift || "").trim();
-    
-    // FIXED: Verify duplicate criteria against the shift-scoped compound key
+    const currentNo = String(p.orderNo || "").trim(); const currentShift = String(p.shift || "").trim();
     const isDuplicate = currentNo && currentShift && orderShiftCounts[`${currentNo}-${currentShift}`] > 1;
     const orderCellValue = isDuplicate ? `${p.orderNo} (⚠️ Duplicate)` : p.orderNo;
-    
-    return [
-      i + 1, orderCellValue, classifyOrder(p.orderNo), p.section || "",
-      p.jobDescription, p.receiver, p.contactNo || "", p.isolationTime || "", 
-      p.issueTime || "", p.extendedTime || "", p.returnedTime || "",
-      (p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated",
-      p.status || "—", p.issuer || ""
-    ];
+    return [ i + 1, orderCellValue, classifyOrder(p.orderNo), p.section || "", p.jobDescription, p.receiver, p.contactNo || "", p.isolationTime || "", p.issueTime || "", p.extendedTime || "", p.returnedTime || "", (p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated", p.status || "—", p.issuer || "" ];
   });
-  
   const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; 
-  a.download = `Permits_${sectionFilter}_Shift${meta.shift}_${meta.date.replace(/\//g, "-")}.csv`;
-  
-  document.body.appendChild(a); 
-  a.click(); 
-  
-  // Clean up execution environment immediately
-  setTimeout(() => {
-    document.body.removeChild(a); 
-    URL.revokeObjectURL(url);
-  }, 100);
+  const a = document.createElement("a"); a.href = url; a.download = `Permits_${sectionFilter}_Shift${meta.shift}_${meta.date.replace(/\//g, "-")}.csv`;
+  document.body.appendChild(a); a.click(); 
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
+
 function shareReport() {
-  const ap = activePermits();
-  const orderCounts = {};
-  ap.forEach(p => {
-    const num = String(p.orderNo || "").trim();
-    if (num) orderCounts[num] = (orderCounts[num] || 0) + 1;
-  });
+  const ap = activePermits(); const orderCounts = {};
+  ap.forEach(p => { const num = String(p.orderNo || "").trim(); if (num) orderCounts[num] = (orderCounts[num] || 0) + 1; });
   const sectionPriority = { "Mechanical": 1, "Electrical": 2, "Operation": 3 };
   const orderTypePriority = { "MA": 1, "M3": 2, "M4": 3, "M2": 4, "M1": 5 };
   const matchRules = {
-    "ALL": p => true,
-    "Mechanical": p => p.section==="Mechanical",
-    "Electrical": p => p.section==="Electrical",
-    "Operation": p => p.section==="Operation",
-    "returned": p => p.status==="returned",
-    "extended": p => p.status==="extended",
-    "neither": p => p.status!=="returned" && p.status!=="extended",
-    "MA": p => classifyOrder(p.orderNo)==="MA",
-    "M2": p => classifyOrder(p.orderNo)==="M2",
-    "M3": p => classifyOrder(p.orderNo)==="M3",
-    "M4": p => classifyOrder(p.orderNo)==="M4",
+    "ALL": p => true, "Mechanical": p => p.section==="Mechanical", "Electrical": p => p.section==="Electrical", "Operation": p => p.section==="Operation",
+    "returned": p => p.status==="returned", "extended": p => p.status==="extended", "neither": p => p.status!=="returned" && p.status!=="extended",
+    "MA": p => classifyOrder(p.orderNo)==="MA", "M2": p => classifyOrder(p.orderNo)==="M2", "M3": p => classifyOrder(p.orderNo)==="M3", "M4": p => classifyOrder(p.orderNo)==="M4",
     "duplicates": p => String(p.orderNo || "").trim() && orderCounts[String(p.orderNo || "").trim()] > 1
   };
   const permitsToProcess = matchRules[sectionFilter] ? ap.filter(matchRules[sectionFilter]) : ap.filter(p=>p.section===sectionFilter);
-  if (permitsToProcess.length === 0) {
-    alert(`No data to share for filter "${sectionFilter}".`);
-    return;
-  }
+  if (permitsToProcess.length === 0) { alert(`No data to share for filter "${sectionFilter}".`); return; }
   const sortedPermits = [...permitsToProcess].sort((a, b) => {
     const secA = a.section || ""; const secB = b.section || "";
     const pSecA = sectionPriority[secA] || 99; const pSecB = sectionPriority[secB] || 99;
@@ -1573,138 +1058,60 @@ function shareReport() {
   });
   let txt = `📋 *PERMIT TRACKER REPORT*\n📆 Date: ${meta.date} | ⏱️ Shift: ${meta.shift}\n📊 Filter: ${sectionFilter}\n\n`;
   sortedPermits.forEach((p, i) => {
-    const currentNo = String(p.orderNo || "").trim();
-    const isDuplicate = orderCounts[currentNo] > 1;
+    const currentNo = String(p.orderNo || "").trim(); const isDuplicate = orderCounts[currentNo] > 1;
     const orderStr = isDuplicate ? `${p.orderNo} (⚠️ Duplicate)` : p.orderNo;
-    const oType = classifyOrder(p.orderNo);
-    const permitTypeStr = (p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated";
-    txt += `*#${i + 1} . Order No:* ${orderStr}\n`;
-    txt += `▪️ *Type:* ${oType}\n`;
-    txt += `▪️ *Section:* ${p.section || "—"}\n`;
-    txt += `▪️ *Description:* ${p.jobDescription}\n`;
-    txt += `▪️ *Receiver:* ${p.receiver} ${p.contactNo ? `(${p.contactNo})` : ""}\n`;
-    txt += `▪️ *Isolation Time:* ${p.isolationTime || "—"}\n`;
-    txt += `▪️ *Issue Time:* ${p.issueTime || "—"}\n`;
-    txt += `▪️ *Extended Time:* ${p.extendedTime || "—"}\n`;
-    txt += `▪️ *Returned Time:* ${p.returnedTime || "—"}\n`;
-    txt += `▪️ *Permit Type:* ${permitTypeStr}\n`;
-    txt += `▪️ *Status:* ${p.status || "—"}\n`;
-    txt += `▪️ *Issued By:* ${p.issuer || "—"}\n`;
-    txt += `--------------------------------------\n`;
+    const oType = classifyOrder(p.orderNo); const permitTypeStr = (p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated";
+    txt += `*#${i + 1} . Order No:* ${orderStr}\n▪️ *Type:* ${oType}\n▪️ *Section:* ${p.section || "—"}\n▪️ *Description:* ${p.jobDescription}\n▪️ *Receiver:* ${p.receiver} ${p.contactNo ? `(${p.contactNo})` : ""}\n▪️ *Isolation Time:* ${p.isolationTime || "—"}\n▪️ *Issue Time:* ${p.issueTime || "—"}\n▪️ *Extended Time:* ${p.extendedTime || "—"}\n▪️ *Returned Time:* ${p.returnedTime || "—"}\n▪️ *Permit Type:* ${permitTypeStr}\n▪️ *Status:* ${p.status || "—"}\n▪️ *Issued By:* ${p.issuer || "—"}\n--------------------------------------\n`;
   });
-  if (navigator.share) {
-    navigator.share({ text: txt }).catch(err => console.log(err));
-  } else {
-    navigator.clipboard.writeText(txt).then(() => alert("Report text copied to clipboard!"));
-  }
+  if (navigator.share) { navigator.share({ text: txt }).catch(err => console.log(err)); } else { navigator.clipboard.writeText(txt).then(() => alert("Report text copied to clipboard!")); }
 }
-// ══════════════════════════════════════
-//  MODAL
-// ══════════════════════════════════════
+
 function showModal(html) {
   removeModal();
-  const overlay = document.createElement("div");
-  overlay.className="overlay"; overlay.id="modal-overlay";
-  overlay.innerHTML=`<div class="modal">${html}</div>`;
-  overlay.addEventListener("click",e=>{if(e.target===overlay)removeModal();});
+  const overlay = document.createElement("div"); overlay.className="overlay"; overlay.id="modal-overlay";
+  overlay.innerHTML=`<div class="modal">${html}</div>`; overlay.addEventListener("click",e=>{if(e.target===overlay)removeModal();});
   document.body.appendChild(overlay);
 }
 function removeModal() { const el=document.getElementById("modal-overlay"); if(el) el.remove(); }
-// ══════════════════════════════════════
-//  AUTOCOMPLETE
-//  ROOT FIX: Never pass strings through
-//  onclick HTML attributes — they break
-//  on special chars and quotes.
-//  Instead: store matches in a JS Map,
-//  reference by numeric index only.
-// ══════════════════════════════════════
-let acTarget = null;
-const acStore = {}; // listId -> { matches[], inputId, field }
+
+let acTarget = null; const acStore = {};
 function acGetSuggestions(field, query) {
   if (!query) return [];
-  const q = query.toLowerCase();
-  const seen = new Set();
-  return permits
-    .map(p => {
-        // Safely convert whatever value exists to a string first
-        const val = p[field] !== undefined && p[field] !== null ? String(p[field]) : "";
-        return val.trim();
-    })
-    .filter(v => {
-        if (!v || seen.has(v)) return false;
-        seen.add(v);
-        return v.toLowerCase().includes(q);
-    })
-    .slice(0, 7);
+  const q = query.toLowerCase(); const seen = new Set();
+  return permits.map(p => { const val = p[field] !== undefined && p[field] !== null ? String(p[field]) : ""; return val.trim(); })
+    .filter(v => { if (!v || seen.has(v)) return false; seen.add(v); return v.toLowerCase().includes(q); }).slice(0, 7);
 }
 function acShow(field, inputId, listId) {
-  const input = document.getElementById(inputId);
-  const list  = document.getElementById(listId);
+  const input = document.getElementById(inputId); const list  = document.getElementById(listId);
   if (!input||!list) return;
-  const query = input.value;
-  const matches = acGetSuggestions(field, query);
+  const query = input.value; const matches = acGetSuggestions(field, query);
   if (!matches.length) { list.style.display="none"; return; }
-  // Store matches in JS — DO NOT pass values through HTML attributes
-  acStore[listId] = { matches, inputId, field };
-  const q = query.toLowerCase();
+  acStore[listId] = { matches, inputId, field }; const q = query.toLowerCase();
   list.innerHTML = matches.map((m, idx)=>{
     const i = m.toLowerCase().indexOf(q);
-    const hi = i>=0
-      ? esc(m.slice(0,i))+"<b>"+esc(m.slice(i,i+q.length))+"</b>"+esc(m.slice(i+q.length))
-      : esc(m);
-    // Pass only the numeric index — completely safe in HTML attribute
+    const hi = i>=0 ? esc(m.slice(0,i))+"<b>"+esc(m.slice(i,i+q.length))+"</b>"+esc(m.slice(i+q.length)) : esc(m);
     return `<div class="ac-item" data-idx="${idx}">${hi}</div>`;
   }).join("");
-  // Attach listeners directly to DOM elements — no attribute encoding needed
   list.querySelectorAll(".ac-item").forEach(el=>{
     const handler = e=>{
-      e.preventDefault();
-      e.stopPropagation();
-      const idx = parseInt(el.getAttribute("data-idx"));
-      const store = acStore[listId];
-      if (!store) return;
-      const value = store.matches[idx];
-      const inp = document.getElementById(store.inputId);
+      e.preventDefault(); e.stopPropagation();
+      const idx = parseInt(el.getAttribute("data-idx")); const store = acStore[listId]; if (!store) return;
+      const value = store.matches[idx]; const inp = document.getElementById(store.inputId);
       if (inp) inp.value = value;
-      list.style.display="none";
-      acTarget = null;
-      // Auto-fill contact when receiver picked
-      if (store.field==="receiver") {
-        const match = permits.find(p=>p.receiver===value&&p.contactNo);
-        if (match) { const c=document.getElementById("f-contact"); if(c&&!c.value) c.value=match.contactNo; }
-      }
-      // Auto-fill job description when order number picked
-      if (store.field==="orderNo") {
-        const match = permits.find(p=>p.orderNo==value && p.jobDescription);
-        if (match) { const jd=document.getElementById("f-jobDesc"); if (jd && !jd.value) jd.value = match.jobDescription; }
-      }
+      list.style.display="none"; acTarget = null;
+      if (store.field==="receiver") { const match = permits.find(p=>p.receiver===value&&p.contactNo); if (match) { const c=document.getElementById("f-contact"); if(c&&!c.value) c.value=match.contactNo; } }
+      if (store.field==="orderNo") { const match = permits.find(p=>p.orderNo==value && p.jobDescription); if (match) { const jd=document.getElementById("f-jobDesc"); if (jd && !jd.value) jd.value = match.jobDescription; } }
     };
-    el.addEventListener("touchend", handler, {passive:false});
-    el.addEventListener("click", handler);
+    el.addEventListener("touchend", handler, {passive:false}); el.addEventListener("click", handler);
   });
-  list.style.display="block";
-  acTarget = listId;
+  list.style.display="block"; acTarget = listId;
 }
-// Close dropdown when tapping outside
-document.addEventListener("touchstart", e=>{
-  if (!acTarget) return;
-  const list = document.getElementById(acTarget);
-  if (list && !list.contains(e.target)) { list.style.display="none"; acTarget=null; }
-}, true);
-document.addEventListener("click", e=>{
-  if (!acTarget) return;
-  const list = document.getElementById(acTarget);
-  if (list && !list.contains(e.target)) { list.style.display="none"; acTarget=null; }
-}, true);
+document.addEventListener("touchstart", e=>{ if (!acTarget) return; const list = document.getElementById(acTarget); if (list && !list.contains(e.target)) { list.style.display="none"; acTarget=null; } }, true);
+document.addEventListener("click", e=>{ if (!acTarget) return; const list = document.getElementById(acTarget); if (list && !list.contains(e.target)) { list.style.display="none"; acTarget=null; } }, true);
+
 function onOrderInput(val) {
-    const type = classifyOrder(val);
-    const el = document.getElementById("order-type-preview");
-    if (el) {
-        el.innerHTML = type && type !== "-" 
-            ? `Type: <b class="badge ${orderTypeBadgeCls(type)}" style="font-size:11px">${type}</b>` 
-            : val.length > 0 ? `<span style="color:#94a3b8">No match - ${val.length} digit(s)</span>` : "";
-    }
-    // Explicitly call autocomplete logic AFTER the DOM update is handled
+    const type = classifyOrder(val); const el = document.getElementById("order-type-preview");
+    if (el) { el.innerHTML = type && type !== "-" ? `Type: <b class="badge ${orderTypeBadgeCls(type)}" style="font-size:11px">${type}</b>` : val.length > 0 ? `<span style="color:#94a3b8">No match - ${val.length} digit(s)</span>` : ""; }
     acShow('orderNo', 'f-orderNo', 'ac-orderNo');
 }
 function selectSection(sec) {
@@ -1718,190 +1125,57 @@ function selectSection(sec) {
 }
 function selectStatus(val) {
   const h=document.getElementById("f-status"); if(h) h.value=val;
-  document.querySelectorAll(".ext-ret-btn").forEach(btn=>{
-    btn.classList.remove("active-ext","active-ret");
-  });
-  const extBtn=document.getElementById("btn-extended");
-  const retBtn=document.getElementById("btn-returned");
-  if(val==="extended"&&extBtn) extBtn.classList.add("active-ext");
-  if(val==="returned"&&retBtn) retBtn.classList.add("active-ret");
-  // Show/hide time fields
-  const extField=document.getElementById("ext-time-field");
-  const retField=document.getElementById("ret-time-field");
-  if(extField) extField.style.display = val==="extended"?"":"none";
-  if(retField) retField.style.display = val==="returned"?"":"none";
+  document.querySelectorAll(".ext-ret-btn").forEach(btn=>{ btn.classList.remove("active-ext","active-ret"); });
+  const extBtn=document.getElementById("btn-extended"); const retBtn=document.getElementById("btn-returned");
+  if(val==="extended"&&extBtn) extBtn.classList.add("active-ext"); if(val==="returned"&&retBtn) retBtn.classList.add("active-ret");
+  const extField=document.getElementById("ext-time-field"); const retField=document.getElementById("ret-time-field");
+  if(extField) extField.style.display = val==="extended"?"":"none"; if(retField) retField.style.display = val==="returned"?"":"none";
 }
 function toggleOnline() {
-  const iso=document.getElementById("iso-field");
-  const chk=document.getElementById("f-online");
+  const iso=document.getElementById("iso-field"); const chk=document.getElementById("f-online");
   if(iso) iso.style.display=chk.checked?"none":"";
 }
 function stampNow(id) { const el=document.getElementById(id); if(el) el.value=nowTime(); }
 
 function openCustomFilterModal() {
-  const shiftsList = ["A", "B", "C", "G"];
-  const typesList = ["MA", "M1", "M2", "M3", "M4"];
-  const sectionsList = ["Electrical", "Mechanical", "Operation"];
-  
-  // Dynamically extract unique receiver names from currently active permits
-  const ap = activePermits();
-  const receiversList = [...new Set(ap.map(p => p.receiver).filter(Boolean))].sort();
+  const shiftsList = ["A", "B", "C", "G"]; const typesList = ["MA", "M1", "M2", "M3", "M4"]; const sectionsList = ["Electrical", "Mechanical", "Operation"];
+  const ap = activePermits(); const receiversList = [...new Set(ap.map(p => p.receiver).filter(Boolean))].sort();
 
   const html = `
-    <div class="modal-header">
-      <span class="modal-title">🔍 Advanced Custom Filters</span>
-      <button class="close-btn" onclick="removeModal()">×</button>
-    </div>
+    <div class="modal-header"><span class="modal-title">🔍 Advanced Custom Filters</span><button class="close-btn" onclick="removeModal()">×</button></div>
     <div class="modal-body" style="padding-bottom: 30px;">
-      
-      <div class="field">
-        <label>Shift Filter Criteria</label>
-        <div style="display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap;">
-          ${shiftsList.map(s => {
-            const isChecked = (customFilters.shifts || []).includes(s) ? 'checked' : '';
-            return `
-              <label style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #000000; cursor: pointer;">
-                <input type="checkbox" name="c-shift" value="${s}" ${isChecked} style="width: 18px; height: 18px; accent-color: #1e3a5f;">
-                Shift ${s}
-              </label>
-            `;
-          }).join("")}
-        </div>
-      </div>
-
-      <div class="field" style="margin-top: 20px;">
-        <label>Order Type Category Selection</label>
-        <div style="display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap;">
-          ${typesList.map(t => {
-            const isChecked = (customFilters.orderTypes || []).includes(t) ? 'checked' : '';
-            return `
-              <label style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #000000; cursor: pointer;">
-                <input type="checkbox" name="c-type" value="${t}" ${isChecked} style="width: 18px; height: 18px; accent-color: #1e3a5f;">
-                ${t}
-              </label>
-            `;
-          }).join("")}
-        </div>
-      </div>
-
-      <div class="field" style="margin-top: 20px;">
-        <label>Section Domain Area</label>
-        <div style="display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap;">
-          ${sectionsList.map(sec => {
-            const isChecked = (customFilters.sections || []).includes(sec) ? 'checked' : '';
-            return `
-              <label style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #000000; cursor: pointer;">
-                <input type="checkbox" name="c-section" value="${sec}" ${isChecked} style="width: 18px; height: 18px; accent-color: #1e3a5f;">
-                ${sec}
-              </label>
-            `;
-          }).join("")}
-        </div>
-      </div>
-      
-      <!-- NEW DYNAMIC RECEIVER SECTION -->
-      <div class="field" style="margin-top: 20px;">
-        <label>Receiver (Active Only)</label>
-        <div style="display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap;">
-          ${receiversList.length === 0 ? '<span style="font-size:13px; color:#64748b;">No active receivers available.</span>' : receiversList.map(r => {
-            const isChecked = (customFilters.receivers || []).includes(r) ? 'checked' : '';
-            return `
-              <label style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #000000; cursor: pointer;">
-                <input type="checkbox" name="c-receiver" value="${esc(r)}" ${isChecked} style="width: 18px; height: 18px; accent-color: #1e3a5f;">
-                ${esc(r)}
-              </label>
-            `;
-          }).join("")}
-        </div>
-      </div>
-
-      <div class="field" style="margin-top: 20px;">
-        <label>Unit Segment</label>
-        <select id="c-unit" style="color: #000000 !important;">
-          <option value="">-- All Target Units --</option>
-          <option value="ARS-2" ${customFilters.unit === "ARS-2" ? "selected" : ""}>ARS-2</option>
-          <option value="ARS-3" ${customFilters.unit === "ARS-3" ? "selected" : ""}>ARS-3</option>
-        </select>
-      </div>
-
-      <div class="field" style="margin-top: 20px;">
-        <label>Status & Lifecycle Criteria</label>
-        <select id="c-status" style="color: #000000 !important;">
-          <option value="">-- All Active Statuses --</option>
-          <option value="extended" ${customFilters.status === "extended" ? "selected" : ""}>⏰ Extended Status Only</option>
-          <option value="returned" ${customFilters.status === "returned" ? "selected" : ""}>🔁 Returned Status Only</option>
-          <option value="blank" ${customFilters.status === "blank" ? "selected" : ""}>❓ Blank (Neither Extended nor Returned Status)</option>
-          <option value="ext_and_ret" ${customFilters.status === "ext_and_ret" ? "selected" : ""}>🔄 Extended AND Returned (Has values in both times)</option>
-          <option value="duplicates" ${customFilters.status === "duplicates" ? "selected" : ""}>⚠️ Duplicates logged in Same Shift</option>
-        </select>
-      </div>
-
-      <div class="btn-row" style="margin-top: 25px;">
-        <button class="btn-secondary" onclick="resetCustomFilters()" style="flex: 1; padding: 12px;">Clear Filters</button>
-        <button class="btn-primary" onclick="applyCustomFilters()" style="flex: 2; padding: 12px;">Apply Selected Filter</button>
-      </div>
-
-    </div>
-  `;
+      <div class="field"><label>Shift Filter Criteria</label><div style="display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap;">${shiftsList.map(s => { const isChecked = (customFilters.shifts || []).includes(s) ? 'checked' : ''; return `<label style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #000000; cursor: pointer;"><input type="checkbox" name="c-shift" value="${s}" ${isChecked} style="width: 18px; height: 18px; accent-color: #1e3a5f;">Shift ${s}</label>`; }).join("")}</div></div>
+      <div class="field" style="margin-top: 20px;"><label>Order Type Category Selection</label><div style="display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap;">${typesList.map(t => { const isChecked = (customFilters.orderTypes || []).includes(t) ? 'checked' : ''; return `<label style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #000000; cursor: pointer;"><input type="checkbox" name="c-type" value="${t}" ${isChecked} style="width: 18px; height: 18px; accent-color: #1e3a5f;">${t}</label>`; }).join("")}</div></div>
+      <div class="field" style="margin-top: 20px;"><label>Section Domain Area</label><div style="display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap;">${sectionsList.map(sec => { const isChecked = (customFilters.sections || []).includes(sec) ? 'checked' : ''; return `<label style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #000000; cursor: pointer;"><input type="checkbox" name="c-section" value="${sec}" ${isChecked} style="width: 18px; height: 18px; accent-color: #1e3a5f;">${sec}</label>`; }).join("")}</div></div>
+      <div class="field" style="margin-top: 20px;"><label>Receiver (Active Only)</label><div style="display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap;">${receiversList.length === 0 ? '<span style="font-size:13px; color:#64748b;">No active receivers available.</span>' : receiversList.map(r => { const isChecked = (customFilters.receivers || []).includes(r) ? 'checked' : ''; return `<label style="display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: #000000; cursor: pointer;"><input type="checkbox" name="c-receiver" value="${esc(r)}" ${isChecked} style="width: 18px; height: 18px; accent-color: #1e3a5f;">${esc(r)}</label>`; }).join("")}</div></div>
+      <div class="field" style="margin-top: 20px;"><label>Unit Segment</label><select id="c-unit" style="color: #000000 !important;"><option value="">-- All Target Units --</option><option value="ARS-2" ${customFilters.unit === "ARS-2" ? "selected" : ""}>ARS-2</option><option value="ARS-3" ${customFilters.unit === "ARS-3" ? "selected" : ""}>ARS-3</option></select></div>
+      <div class="field" style="margin-top: 20px;"><label>Status & Lifecycle Criteria</label><select id="c-status" style="color: #000000 !important;"><option value="">-- All Active Statuses --</option><option value="extended" ${customFilters.status === "extended" ? "selected" : ""}>⏰ Extended Status Only</option><option value="returned" ${customFilters.status === "returned" ? "selected" : ""}>🔁 Returned Status Only</option><option value="blank" ${customFilters.status === "blank" ? "selected" : ""}>❓ Blank (Neither Extended nor Returned Status)</option><option value="ext_and_ret" ${customFilters.status === "ext_and_ret" ? "selected" : ""}>🔄 Extended AND Returned (Has values in both times)</option><option value="duplicates" ${customFilters.status === "duplicates" ? "selected" : ""}>⚠️ Duplicates logged in Same Shift</option></select></div>
+      <div class="btn-row" style="margin-top: 25px;"><button class="btn-secondary" onclick="resetCustomFilters()" style="flex: 1; padding: 12px;">Clear Filters</button><button class="btn-primary" onclick="applyCustomFilters()" style="flex: 2; padding: 12px;">Apply Selected Filter</button></div>
+    </div>`;
   showModal(html);
 }
 
 function applyCustomFilters() {
-  const shiftBoxes = document.querySelectorAll('input[name="c-shift"]:checked');
-  customFilters.shifts = Array.from(shiftBoxes).map(cb => cb.value);
-
-  const typeBoxes = document.querySelectorAll('input[name="c-type"]:checked');
-  customFilters.orderTypes = Array.from(typeBoxes).map(cb => cb.value);
-
-  const sectionBoxes = document.querySelectorAll('input[name="c-section"]:checked');
-  customFilters.sections = Array.from(sectionBoxes).map(cb => cb.value);
-  
-  // Capture the dynamic receiver selections
-  const receiverBoxes = document.querySelectorAll('input[name="c-receiver"]:checked');
-  customFilters.receivers = Array.from(receiverBoxes).map(cb => cb.value);
-
-  customFilters.unit = document.getElementById("c-unit").value;
-  customFilters.status = document.getElementById("c-status").value;
-
-  isCustomFilterActive = (
-    customFilters.shifts.length > 0 ||
-    customFilters.orderTypes.length > 0 ||
-    customFilters.sections.length > 0 ||
-    customFilters.receivers.length > 0 || // Include receivers in active check
-    !!customFilters.unit ||
-    !!customFilters.status
-  );
-
-  sectionFilter = "CUSTOM";
-  removeModal();
-  render();
+  const shiftBoxes = document.querySelectorAll('input[name="c-shift"]:checked'); customFilters.shifts = Array.from(shiftBoxes).map(cb => cb.value);
+  const typeBoxes = document.querySelectorAll('input[name="c-type"]:checked'); customFilters.orderTypes = Array.from(typeBoxes).map(cb => cb.value);
+  const sectionBoxes = document.querySelectorAll('input[name="c-section"]:checked'); customFilters.sections = Array.from(sectionBoxes).map(cb => cb.value);
+  const receiverBoxes = document.querySelectorAll('input[name="c-receiver"]:checked'); customFilters.receivers = Array.from(receiverBoxes).map(cb => cb.value);
+  customFilters.unit = document.getElementById("c-unit").value; customFilters.status = document.getElementById("c-status").value;
+  isCustomFilterActive = ( customFilters.shifts.length > 0 || customFilters.orderTypes.length > 0 || customFilters.sections.length > 0 || customFilters.receivers.length > 0 || !!customFilters.unit || !!customFilters.status );
+  sectionFilter = "CUSTOM"; removeModal(); render();
 }
 
 function resetCustomFilters() {
-  customFilters = {
-    shifts: [],
-    orderTypes: [],
-    sections: [],
-    receivers: [], // Reset dynamic receivers
-    status: "",
-    unit: ""
-  };
-  isCustomFilterActive = false;
-  sectionFilter = "ALL";
-  removeModal();
-  render();
+  customFilters = { shifts: [], orderTypes: [], sections: [], receivers: [], status: "", unit: "" };
+  isCustomFilterActive = false; sectionFilter = "ALL"; removeModal(); render();
 }
 
 // ══════════════════════════════════════
 //  PERMIT FORM
 // ══════════════════════════════════════
-function permitFormHTML(title, p={}, isEdit=false) {
-  const isOnline = p.isOnline===true||p.isOnline==="TRUE";
-  const section  = p.section||"";
-  const status   = p.status||"";
-  const oType    = classifyOrder(p.orderNo);
-  const showExt  = status==="extended";
-  const showRet  = status==="returned";
+function permitFormHTML(title, p={}, isEdit=false, isApproveRequest=false) {
+  const isOnline = p.isOnline===true||p.isOnline==="TRUE"; const section = p.section||""; const status = p.status||"";
+  const oType = classifyOrder(p.orderNo); const showExt = status==="extended"; const showRet = status==="returned";
   return `
     <div class="modal-header">
       <span class="modal-title">${title}</span>
@@ -1909,48 +1183,31 @@ function permitFormHTML(title, p={}, isEdit=false) {
     </div>
     <div class="modal-body">
       <div class="field">
-    <label>Order No *</label>
-    <div class="ac-wrap">
-        <input id="f-orderNo" type="text" inputmode="numeric" pattern="[0-9]*"
-               placeholder="e.g. 450312" value="${esc(p.orderNo||"")}"
-               oninput="onOrderInput(this.value)"
-               onfocus="acShow('orderNo','f-orderNo','ac-orderNo')"
-               autocomplete="off">
-        <div class="order-type-preview" id="order-type-preview">
-            ${oType&&oType!=="-"?`Type: <b>${oType}</b>`:''}
+        <label>Order No *</label>
+        <div class="ac-wrap">
+            <input id="f-orderNo" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 450312" value="${esc(p.orderNo||"")}" oninput="onOrderInput(this.value)" onfocus="acShow('orderNo','f-orderNo','ac-orderNo')" autocomplete="off">
+            <div class="order-type-preview" id="order-type-preview">${oType&&oType!=="-"?`Type: <b>${oType}</b>`:''}</div>
+            <div class="ac-list" id="ac-orderNo"></div>
         </div>
-        <div class="ac-list" id="ac-orderNo"></div>
-    </div>
-</div>
+      </div>
       <div class="field">
         <label>Job Description *</label>
         <div class="ac-wrap">
-          <textarea id="f-jobDesc" rows="3" placeholder="Describe the job..."
-            oninput="acShow('jobDescription','f-jobDesc','ac-jobDesc')"
-            onfocus="acShow('jobDescription','f-jobDesc','ac-jobDesc')"
-            autocomplete="off">${esc(p.jobDescription||"")}</textarea>
+          <textarea id="f-jobDesc" rows="3" placeholder="Describe the job..." oninput="acShow('jobDescription','f-jobDesc','ac-jobDesc')" onfocus="acShow('jobDescription','f-jobDesc','ac-jobDesc')" autocomplete="off">${esc(p.jobDescription||"")}</textarea>
           <div class="ac-list" id="ac-jobDesc"></div>
         </div>
       </div>
       <div class="field">
         <label>Receiver *</label>
         <div class="ac-wrap">
-          <input id="f-receiver" placeholder="Receiver name"
-            value="${esc(p.receiver||"")}"
-            oninput="acShow('receiver','f-receiver','ac-receiver')"
-            onfocus="acShow('receiver','f-receiver','ac-receiver')"
-            autocomplete="off">
+          <input id="f-receiver" placeholder="Receiver name" value="${esc(p.receiver||"")}" oninput="acShow('receiver','f-receiver','ac-receiver')" onfocus="acShow('receiver','f-receiver','ac-receiver')" autocomplete="off">
           <div class="ac-list" id="ac-receiver"></div>
         </div>
       </div>
       <div class="field">
         <label>Contact No</label>
         <div class="ac-wrap">
-          <input id="f-contact" type="tel" inputmode="numeric" placeholder="Mobile number"
-            value="${esc(p.contactNo||"")}"
-            oninput="acShow('contactNo','f-contact','ac-contact')"
-            onfocus="acShow('contactNo','f-contact','ac-contact')"
-            autocomplete="off">
+          <input id="f-contact" type="tel" inputmode="numeric" placeholder="Mobile number" value="${esc(p.contactNo||"")}" oninput="acShow('contactNo','f-contact','ac-contact')" onfocus="acShow('contactNo','f-contact','ac-contact')" autocomplete="off">
           <div class="ac-list" id="ac-contact"></div>
         </div>
       </div>
@@ -1977,17 +1234,11 @@ function permitFormHTML(title, p={}, isEdit=false) {
       </div>
       <div id="iso-field" class="field" style="${isOnline?"display:none":""}">
         <label>Isolation Time</label>
-        <div class="time-row">
-          <input id="f-isoTime" type="time" value="${esc(p.isolationTime||"")}">
-          <button type="button" class="now-btn" onclick="stampNow('f-isoTime')">Now</button>
-        </div>
+        <div class="time-row"><input id="f-isoTime" type="time" value="${esc(p.isolationTime||"")}"><button type="button" class="now-btn" onclick="stampNow('f-isoTime')">Now</button></div>
       </div>
       <div class="field">
         <label>Issue Time</label>
-        <div class="time-row">
-          <input id="f-issueTime" type="time" value="${esc(p.issueTime||"")}">
-          <button type="button" class="now-btn" onclick="stampNow('f-issueTime')">Now</button>
-        </div>
+        <div class="time-row"><input id="f-issueTime" type="time" value="${esc(p.issueTime||"")}"><button type="button" class="now-btn" onclick="stampNow('f-issueTime')">Now</button></div>
       </div>
       <div class="field">
         <label>Permit Status</label>
@@ -1999,121 +1250,61 @@ function permitFormHTML(title, p={}, isEdit=false) {
       </div>
       <div id="ext-time-field" class="field" style="${showExt?"":"display:none"}">
         <label>Extended Time</label>
-        <div class="time-row">
-          <input id="f-extTime" type="time" value="${esc(p.extendedTime||"")}">
-          <button type="button" class="now-btn" onclick="stampNow('f-extTime')">Now</button>
-        </div>
+        <div class="time-row"><input id="f-extTime" type="time" value="${esc(p.extendedTime||"")}"><button type="button" class="now-btn" onclick="stampNow('f-extTime')">Now</button></div>
       </div>
       <div id="ret-time-field" class="field" style="${showRet?"":"display:none"}">
         <label>Returned Time</label>
-        <div class="time-row">
-          <input id="f-retTime" type="time" value="${esc(p.returnedTime||"")}">
-          <button type="button" class="now-btn" onclick="stampNow('f-retTime')">Now</button>
-        </div>
+        <div class="time-row"><input id="f-retTime" type="time" value="${esc(p.returnedTime||"")}"><button type="button" class="now-btn" onclick="stampNow('f-retTime')">Now</button></div>
       </div>
       <div class="btn-row">
-        ${isEdit?`<button type="button" class="btn-danger" onclick="confirmDelete()">Delete</button>`:""}
-        <button type="button" class="btn-primary" id="save-btn" onclick="savePermit(${isEdit})">
-          ${isEdit?"Update Permit":"Add Permit"}
+        ${isEdit && isIssuer ? `<button type="button" class="btn-danger" onclick="confirmDelete()">Delete</button>`:""}
+        <button type="button" class="btn-primary" id="save-btn" onclick="savePermit(${isEdit}, ${isApproveRequest})">
+          ${isApproveRequest ? "Approve Permit" : isIssuer ? (isEdit ? "Update Permit" : "Add Permit") : "Send for Approval"}
         </button>
       </div>
     </div>`;
 }
-// ══════════════════════════════════════
-//  SCAN PERMIT via GEMINI
-// ══════════════════════════════════════
+
 function startScan() {
-  showModal(`
-    <div class="modal-header">
-      <span class="modal-title">📷 Scan Permit</span>
-      <button class="close-btn" onclick="removeModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:13px;color:#64748b;margin-bottom:14px">
-        Take a clear photo of the permit. Point camera at the top section showing <b>Order No</b> and <b>Description of Work</b>.
-      </p>
-      <img id="scan-preview" class="scan-preview">
-      <div id="scan-status" class="scan-status">⏳ Reading permit...</div>
-      <input type="file" id="scan-file" accept="image/*" capture="environment" onchange="processScan(this)">
-      <button class="btn-primary" onclick="document.getElementById('scan-file').click()">
-        📷 Open Camera
-      </button>
-      <button class="btn-secondary" style="margin-top:10px;width:100%" onclick="showPermitForm()">
-        ✏️ Skip — Enter Manually
-      </button>
-    </div>`);
+  showModal(`<div class="modal-header"><span class="modal-title">📷 Scan Permit</span><button class="close-btn" onclick="removeModal()">×</button></div><div class="modal-body"><p style="font-size:13px;color:#64748b;margin-bottom:14px">Take a clear photo of the permit. Point camera at the top section showing <b>Order No</b> and <b>Description of Work</b>.</p><img id="scan-preview" class="scan-preview"><div id="scan-status" class="scan-status">⏳ Reading permit...</div><input type="file" id="scan-file" accept="image/*" capture="environment" onchange="processScan(this)"><button class="btn-primary" onclick="document.getElementById('scan-file').click()">📷 Open Camera</button><button class="btn-secondary" style="margin-top:10px;width:100%" onclick="showPermitForm()">✏️ Skip — Enter Manually</button></div>`);
 }
 async function processScan(input) {
-  const file = input.files[0];
-  if (!file) return;
-
-  const preview = document.getElementById("scan-preview");
-  preview.src = URL.createObjectURL(file);
-  preview.style.display = "block";
-
-  const status = document.getElementById("scan-status");
-  status.style.display = "block";
-  status.style.background = "#eff6ff";
-  status.style.color = "#1d4ed8";
-  status.innerHTML = "⏳ Sending to AI... this takes 3–5 seconds.";
-
-  // Compress image before sending — reduces payload and speeds up Gemini
-  const canvas = document.createElement("canvas");
-  const img = new Image();
+  const file = input.files[0]; if (!file) return;
+  const preview = document.getElementById("scan-preview"); preview.src = URL.createObjectURL(file); preview.style.display = "block";
+  const status = document.getElementById("scan-status"); status.style.display = "block"; status.style.background = "#eff6ff"; status.style.color = "#1d4ed8"; status.innerHTML = "⏳ Sending to AI... this takes 3–5 seconds.";
+  const canvas = document.createElement("canvas"); const img = new Image();
   img.onload = async () => {
-    // Resize to max 1200px wide — Gemini doesn't need more
-    const MAX = 1200;
-    let w = img.width, h = img.height;
+    const MAX = 1200; let w = img.width, h = img.height;
     if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
-    canvas.width = w; canvas.height = h;
-    canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+    canvas.width = w; canvas.height = h; canvas.getContext("2d").drawImage(img, 0, 0, w, h);
     const base64Image = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
-
     try {
       const result = await api("ocrPermit", { base64Image });
-
-      if (!result || result.error) {
-        throw new Error(result ? result.error : "No response from server.");
-      }
-
-      const orderNo = String(result.orderNo || "").replace(/\D/g,"").trim();
-      const jobDescription = String(result.jobDescription || "").trim();
-
-      status.style.background = "#dcfce7";
-      status.style.color = "#16a34a";
-      status.innerHTML = orderNo
-        ? `✅ Scanned: Order <b>${orderNo}</b> — verify and complete remaining fields.`
-        : "✅ AI read the image — please verify the fields below.";
-
+      if (!result || result.error) throw new Error(result ? result.error : "No response from server.");
+      const orderNo = String(result.orderNo || "").replace(/\D/g,"").trim(); const jobDescription = String(result.jobDescription || "").trim();
+      status.style.background = "#dcfce7"; status.style.color = "#16a34a";
+      status.innerHTML = orderNo ? `✅ Scanned: Order <b>${orderNo}</b> — verify and complete remaining fields.` : "✅ AI read the image — please verify the fields below.";
       setTimeout(() => {
-        removeModal();
-        showPermitForm({ orderNo, jobDescription });
-        // Show confirmation banner inside the form
+        removeModal(); showPermitForm({ orderNo, jobDescription });
         setTimeout(() => {
           const banner = document.createElement("div");
           banner.style.cssText = "background:#dcfce7;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;font-size:12px;color:#16a34a;margin-bottom:14px";
-          banner.innerHTML = "✅ AI Scanned — " +
-            (orderNo ? `Order <b>${orderNo}</b>` : "Order not detected") +
-            (jobDescription ? ` · ${jobDescription.slice(0,50)}${jobDescription.length>50?"...":""}` : "");
-          const body = document.querySelector(".modal-body");
-          if (body) body.insertBefore(banner, body.firstChild);
+          banner.innerHTML = "✅ AI Scanned — " + (orderNo ? `Order <b>${orderNo}</b>` : "Order not detected") + (jobDescription ? ` · ${jobDescription.slice(0,50)}${jobDescription.length>50?"...":""}` : "");
+          const body = document.querySelector(".modal-body"); if (body) body.insertBefore(banner, body.firstChild);
         }, 80);
       }, 600);
-
     } catch(err) {
-      console.error("AI scan error:", err);
-      status.style.background = "#fff1f2";
-      status.style.color = "#be123c";
-      status.innerHTML = "❌ " + (err.message || "AI processing failed.") +
-        " &nbsp;<button onclick=\"showPermitForm()\" style=\"background:#e11d48;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer\">Enter Manually</button>";
+      console.error("AI scan error:", err); status.style.background = "#fff1f2"; status.style.color = "#be123c";
+      status.innerHTML = "❌ " + (err.message || "AI processing failed.") + " &nbsp;<button onclick=\"showPermitForm()\" style=\"background:#e11d48;color:white;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer\">Enter Manually</button>";
     }
   };
   img.src = URL.createObjectURL(file);
 }
+
 // ══════════════════════════════════════
 //  SAVE / DELETE
 // ══════════════════════════════════════
-async function savePermit(isEdit) {
+async function savePermit(isEdit, isApproveRequest=false) {
   const orderNo        = document.getElementById("f-orderNo").value.trim();
   const jobDescription = document.getElementById("f-jobDesc").value.trim();
   const receiver       = document.getElementById("f-receiver").value.trim();
@@ -2130,167 +1321,145 @@ async function savePermit(isEdit) {
   if (!section) { alert("Please select a Section."); return; }
   if (!unit) { alert("Please select a Unit (ARS-2 or ARS-3)."); return; }
   const btn = document.getElementById("save-btn");
-  btn.disabled=true; btn.textContent="Saving...";
+  btn.disabled=true; btn.textContent="Processing...";
   try {
-    const permit = { orderNo, jobDescription, receiver, contactNo, section, unit, status, isOnline, isolationTime, issueTime, extendedTime, returnedTime, issuer:meta.issuer, shiftDate:meta.date, shift:meta.shift };
-    if (isEdit) { permit.id=editingPermit.id; await api("update",{permit}); }
-    else { await api("add",{permit}); }
+    const permit = { orderNo, jobDescription, receiver, contactNo, section, unit, status, isOnline, isolationTime, issueTime, extendedTime, returnedTime, issuer:meta.issuer || (editingPermit ? editingPermit.issuer : ""), shiftDate:meta.date, shift:meta.shift };
+    if (isApproveRequest) {
+      permit.id = editingPermit.id;
+      await api("approveRequest", { permit });
+    } else if (isIssuer) {
+      if (isEdit) { permit.id=editingPermit.id; await api("update",{permit}); }
+      else { await api("add",{permit}); }
+    } else {
+      await api("addRequest",{permit});
+      alert("✅ Request sent to Issuer for approval.");
+    }
     removeModal(); await doRefresh();
   } catch(err) {
-    alert("Save failed: "+err.message);
-    btn.disabled=false; btn.textContent=isEdit?"Update Permit":"Add Permit";
+    alert("Action failed: "+err.message);
+    btn.disabled=false; btn.textContent=isApproveRequest ? "Approve Permit" : isIssuer ? (isEdit ? "Update Permit" : "Add Permit") : "Send for Approval";
   }
 }
+
 async function confirmDelete() {
-  // 1. Prompt for password authentication
   const password = prompt("Enter password to delete this permit:");
-  if (password === null) return; // User clicked Cancel
-  // 2. Set your desired password here (e.g., "ARS2026")
-  if (password !== "sherlockholmes1") {
-    alert("❌ Incorrect password. Access denied. Contact admin");
-    return;
-  }
-  // 3. Final confirmation before removing from database
+  if (password === null) return; 
+  if (password !== "sherlockholmes1") { alert("❌ Incorrect password. Access denied. Contact admin"); return; }
   if (!confirm("Are you absolutely sure you want to delete this permit entry?")) return;
-  try { 
-    await api("delete",{id:editingPermit.id}); 
-    removeModal(); 
-    await doRefresh(); 
-  } catch(err) { 
-    alert("Delete failed: "+err.message); 
-  }
+  try { await api("delete",{id:editingPermit.id}); removeModal(); await doRefresh(); } 
+  catch(err) { alert("Delete failed: "+err.message); }
 }
+
 function openAdd() {
-  showModal(`
-    <div class="modal-header">
-      <span class="modal-title">New Permit</span>
-      <button class="close-btn" onclick="removeModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:13px;color:#64748b;margin-bottom:14px">How do you want to add this permit?</p>
-      <div class="scan-choice">
-        <button onclick="startScan()">
-          <span>📷</span>
-          Scan Permit
-        </button>
-        <button onclick="showPermitForm()">
-          <span>✏️</span>
-          Enter Manually
-        </button>
-      </div>
-    </div>`);
+  showModal(`<div class="modal-header"><span class="modal-title">New Permit</span><button class="close-btn" onclick="removeModal()">×</button></div><div class="modal-body"><p style="font-size:13px;color:#64748b;margin-bottom:14px">How do you want to add this permit?</p><div class="scan-choice"><button onclick="startScan()"><span>📷</span>Scan Permit</button><button onclick="showPermitForm()"><span>✏️</span>Enter Manually</button></div></div>`);
 }
-function showPermitForm(prefill={}) {
-  showModal(permitFormHTML("New Permit", prefill, false));
-}
+function showPermitForm(prefill={}) { showModal(permitFormHTML("New Permit", prefill, false)); }
 function openEdit(id) {
   editingPermit = permits.find(p=>String(p.id)===String(id));
   if (!editingPermit) { alert("Could not find permit. Try refreshing."); return; }
   showModal(permitFormHTML("Edit Permit",editingPermit,true));
 }
+
 // ══════════════════════════════════════
 //  SETUP
 // ══════════════════════════════════════
 function openSetup() {
+  const calculatedShift = getAutoShift();
+  const currentShift = meta.shift || calculatedShift;
+
   showModal(`
     <div class="modal-header"><span class="modal-title">Shift Setup</span><button class="close-btn" onclick="removeModal()">×</button></div>
     <div class="modal-body" style="background-color: #ffffff !important; color: #1e293b !important;">
-      <p style="font-size:13px;color:#64748b;margin-bottom:16px">Each phone sets its own issuer name. Date and shift are shared.</p>
-      <div class="field"><label>Date</label><input id="s-date" type="date" value="${meta.date.split("/").reverse().join("-")}"></div>
+      ${isIssuer ? `
+        <div style="background:#dcfce7; border:1px solid #bbf7d0; color:#16a34a; padding:10px; border-radius:8px; font-weight:bold; font-size:13px; margin-bottom:14px; text-align:center;">
+          Currently has issuer access in this device only
+        </div>
+      ` : ''}
+      
+      <p style="font-size:13px;color:#64748b;margin-bottom:16px">Date and shift settings.</p>
+      <div class="field"><label>Date</label><input id="s-date" type="date" value="${meta.date ? meta.date.split("/").reverse().join("-") : new Date().toISOString().slice(0, 10)}"></div>
       <div class="field">
         <label>Shift</label>
         <select id="s-shift">
-          ${["", "A", "B", "C", "G"].map(s => `<option value="${s}" ${meta.shift === s ? "selected" : ""}>${s === "" ? "— All Shifts (Blank) —" : s}</option>`).join("")}
+          ${["", "A", "B", "C", "G"].map(s => `<option value="${s}" ${currentShift === s ? "selected" : ""}>${s === "" ? "— All Shifts (Blank) —" : s}</option>`).join("")}
         </select>
       </div>
-      <div class="field"><label>Your Name (Issuer)</label><input id="s-issuer" placeholder="e.g. Omkar" value="${esc(meta.issuer||"")}"></div>
-      <div style="background-color: #eff6ff !important; border: 1px solid #bfdbfe !important; border-radius: 8px !important; padding: 12px !important; margin-top: 14px !important; margin-bottom: 14px !important; display: block !important; clear: both !important;">
-        <label style="font-weight:700 !important; font-size:11px !important; color:#1e3a5f !important; display:block !important; margin-bottom:4px !important;">YOUR TRUST SHARE KEY</label>
-        <div style="display:flex !important; gap:8px !important; align-items:center !important;">
-          <input type="text" readonly value="${DEVICE_TOKEN}" style="flex:1 !important; padding:6px !important; font-size:13px !important; font-family:monospace !important; background-color:#ffffff !important; border:1px solid #cbd5e1 !important; border-radius:6px !important; color:#000000 !important;" id="trust-key-field">
-          <button type="button" style="padding:6px 10px !important; height:32px !important; margin:0 !important; cursor:pointer !important; background-color:#e2e8f0 !important; color:#1e293b !important; border:1px solid #cbd5e1 !important; border-radius:6px !important; font-size:12px !important;" onclick="navigator.clipboard.writeText('${DEVICE_TOKEN}'); alert('Copied to clipboard!');">📋 Copy</button>
+
+      ${isIssuer ? `
+        <div class="field"><label>Your Name (Issuer)</label><input id="s-issuer" placeholder="e.g. Omkar" value="${esc(meta.issuer||"")}"></div>
+        <div style="background-color: #eff6ff !important; border: 1px solid #bfdbfe !important; border-radius: 8px !important; padding: 12px !important; margin-top: 14px !important; margin-bottom: 14px !important; display: block !important; clear: both !important;">
+          <label style="font-weight:700 !important; font-size:11px !important; color:#1e3a5f !important; display:block !important; margin-bottom:4px !important;">YOUR TRUST SHARE KEY</label>
+          <div style="display:flex !important; gap:8px !important; align-items:center !important;">
+            <input type="text" readonly value="${DEVICE_TOKEN}" style="flex:1 !important; padding:6px !important; font-size:13px !important; font-family:monospace !important; background-color:#ffffff !important; border:1px solid #cbd5e1 !important; border-radius:6px !important; color:#000000 !important;" id="trust-key-field">
+            <button type="button" style="padding:6px 10px !important; height:32px !important; margin:0 !important; cursor:pointer !important; background-color:#e2e8f0 !important; color:#1e293b !important; border:1px solid #cbd5e1 !important; border-radius:6px !important; font-size:12px !important;" onclick="navigator.clipboard.writeText('${DEVICE_TOKEN}'); alert('Copied to clipboard!');">📋 Copy</button>
+          </div>
         </div>
-      </div>
-      <div class="field" style="margin-top:14px !important; margin-bottom:16px !important;">
-        <label>Link Colleague Device Signature</label>
-        <div style="display:flex !important; gap:8px !important;">
-          <input id="s-peer-token" type="text" placeholder="Paste peer's DEV- token key" style="font-size:14px !important; padding:10px !important; flex: 1 !important;">
-          <button type="button" class="btn-primary" style="padding:0 14px !important; width:auto !important; font-size:13px !important; white-space:nowrap !important; border-radius:10px !important; margin:0 !important;" onclick="linkDeviceHandshake()">Link Device</button>
+        <div class="field" style="margin-top:14px !important; margin-bottom:16px !important;">
+          <label>Link Colleague Device Signature</label>
+          <div style="display:flex !important; gap:8px !important;">
+            <input id="s-peer-token" type="text" placeholder="Paste peer's DEV- token key" style="font-size:14px !important; padding:10px !important; flex: 1 !important;">
+            <button type="button" class="btn-primary" style="padding:0 14px !important; width:auto !important; font-size:13px !important; white-space:nowrap !important; border-radius:10px !important; margin:0 !important;" onclick="linkDeviceHandshake()">Link Device</button>
+          </div>
         </div>
-      </div>
+      ` : `
+        <div class="field" style="margin-top:14px !important; margin-bottom:16px !important; padding:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px;">
+          <label style="color:#b45309;">Request Issuer Access</label>
+          <p style="font-size:11px; color:#92400e; margin-bottom:8px;">Send a request to the admin to approve this device for issuing and approving permits.</p>
+          <button type="button" onclick="requestIssuer()" style="background:#f59e0b; color:white; border:none; padding:8px 12px; border-radius:6px; font-weight:bold; cursor:pointer;">Request Access</button>
+        </div>
+      `}
+
       <button class="btn-primary" onclick="saveSetup()">Save & Continue</button>
-      <div style="margin-top:16px !important;padding-top:16px !important;border-top:1px solid #f1f5f9 !important;clear: both !important;">
-        <button onclick="resetUrl()" style="background:none !important;border:none !important;color:#94a3b8 !important;font-size:12px !important;cursor:pointer !important;">Change API URL</button>
-      </div>
     </div>`);
 }
+
+async function requestIssuer() {
+  try {
+    const res = await api("requestIssuerAccess"); 
+    if (res.error) throw new Error(res.error);
+    alert("✅ " + res.message);
+    await doRefresh(); 
+  } catch(e) { alert("❌ Request Failed: " + e.message); }
+}
+
 async function linkDeviceHandshake() {
   const peerToken = document.getElementById("s-peer-token").value.trim();
-  if (!peerToken || !peerToken.startsWith("DEV-")) {
-    alert("Please enter a valid colleague device token (starting with 'DEV-')");
-    return;
-  }
-  if (peerToken === DEVICE_TOKEN) {
-    alert("You cannot establish a trust handshake with your own device token.");
-    return;
-  }
+  if (!peerToken || !peerToken.startsWith("DEV-")) { alert("Please enter a valid colleague device token (starting with 'DEV-')"); return; }
+  if (peerToken === DEVICE_TOKEN) { alert("You cannot establish a trust handshake with your own device token."); return; }
   try {
     await api("grantGlobalTrust", { trustTarget: peerToken });
     alert("Global Trust handshake established successfully! This colleague can now edit or update records you create.");
     document.getElementById("s-peer-token").value = "";
-  } catch (err) {
-    alert("Failed to save trust mapping: " + err.message);
-  }
+  } catch (err) { alert("Failed to save trust mapping: " + err.message); }
 }
+
 async function saveSetup() {
   const parts = document.getElementById("s-date").value.split("-");
-  meta = {
-    date:   parts[2]+"/"+parts[1]+"/"+parts[0],
-    shift:  document.getElementById("s-shift").value,
-    issuer: document.getElementById("s-issuer").value.trim()
-  };
-  // Save to localStorage — this is the source of truth for meta
+  const issuerVal = document.getElementById("s-issuer") ? document.getElementById("s-issuer").value.trim() : (meta.issuer || "");
+  meta = { date: parts[2]+"/"+parts[1]+"/"+parts[0], shift: document.getElementById("s-shift").value, issuer: issuerVal };
   localStorage.setItem("ars2_meta", JSON.stringify(meta));
-  removeModal();
-  render();
+  removeModal(); render();
 }
-function saveUrl() {
-  const url=document.getElementById("url-input").value.trim();
-  if (!url.startsWith("https://script.google.com")) { alert("Please paste a valid Google Apps Script URL."); return; }
-  API_URL=url; localStorage.setItem("ars2_api_url",url); init();
-}
-function resetUrl() {
-  if (!confirm("Reset API URL?")) return;
-  API_URL=""; localStorage.removeItem("ars2_api_url"); removeModal(); render();
-}
+
 function setFilter(s) { sectionFilter=s; render(); }
 function switchView(v) { currentView=v; render(); }
+
 // ══════════════════════════════════════
 //  REFRESH MANAGEMENT
 // ══════════════════════════════════════
 async function doRefresh(isAuto = false) {
-  if (!API_URL) return;
-  // 1. Skip automatic background syncing if a form/modal is currently open
   if (isAuto && document.getElementById("modal-overlay")) return;
   syncing = true;
-  // 2. Quietly update just the sync button text instead of wiping the whole page layout
   const syncBtn = document.querySelector(".header-actions button");
   if (syncBtn) syncBtn.textContent = "⏳";
-  try { 
-    await loadAll(); 
-  } catch(err) { 
-    console.error(err); 
-  }
+  try { await loadAll(); } catch(err) { console.error(err); }
   syncing = false;
-  // 3. Render once at the end to smoothly display the fresh data
   render();
 }
 async function init() {
   render(); 
-  if (!API_URL) return;
-  await doRefresh(false); // Initial manual load
+  await doRefresh(false); 
   if (refreshTimer) clearInterval(refreshTimer);
-  // Pass true to indicate this is an automated background refresh
   refreshTimer = setInterval(() => doRefresh(true), 20000);
 }
 init();
