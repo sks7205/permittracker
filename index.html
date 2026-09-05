@@ -196,6 +196,28 @@ let rangeEndShift = "C";
 // ══════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════
+
+function getPermitColumnText(p) {
+  const isOnline = (p.isOnline === "TRUE" || p.isOnline === true);
+  const hasIso = !!String(p.isolationTime || "").trim();
+  const hasIssue = !!String(p.issueTime || "").trim();
+
+  if (isOnline) {
+    return hasIssue ? "Online and Issued" : "Online";
+  }
+  if (hasIso && hasIssue) {
+    return "Issued and Isolated";
+  }
+  if (hasIso) {
+    return "Isolated";
+  }
+  if (hasIssue) {
+    return "Issued";
+  }
+  return "—";
+}
+
+
 function evalCustomFilter(p, allPermitsInContext) {
   if (!isCustomFilterActive) return true;
   if (customFilters.shifts && customFilters.shifts.length > 0) { if (!customFilters.shifts.includes(p.shift)) return false; }
@@ -656,7 +678,7 @@ function renderReport() {
       <td>${esc(p.extendedTime || "—")}</td>
       <td>${esc(p.returnedTime || "—")}</td>
       <td>${esc(p.status || "—")}</td>
-      <td>${(p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated"}</td>
+      <td>${getPermitColumnText(p)}</td>
       <td>${esc(p.issuer || "")}</td>
     </tr>`;
   }).join("");
@@ -871,7 +893,7 @@ function dumpFullRangeDataCSV() {
   if (rangePermits.length === 0) { alert("No records found within this timeframe."); return; }
   rangePermits.sort((a, b) => getShiftScore(a.shiftDate, a.shift) - getShiftScore(b.shiftDate, b.shift));
   const headers = ["System ID", "Shift Date", "Shift", "Order No", "Type", "Section", "Job Description", "Receiver", "Contact No", "Isolation Time", "Issue Time", "Extended Time", "Returned Time", "Permit Structure", "Status", "Issued By"];
-  const rows = rangePermits.map(p => [ p.id || "", p.shiftDate || "", p.shift || "", p.orderNo || "", classifyOrder(p.orderNo), p.section || "", p.jobDescription || "", p.receiver || "", p.contactNo || "", p.isolationTime || "—", p.issueTime || "—", p.extendedTime || "—", p.returnedTime || "—", (p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated", p.status || "Issued", p.issuer || "" ]);
+  const rows = rangePermits.map(p => [ p.id || "", p.shiftDate || "", p.shift || "", p.orderNo || "", classifyOrder(p.orderNo), p.section || "", p.jobDescription || "", p.receiver || "", p.contactNo || "", p.isolationTime || "—", p.issueTime || "—", p.extendedTime || "—", p.returnedTime || "—", getPermitColumnText(p), p.status || "Issued", p.issuer || "" ]);
   const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -1024,7 +1046,7 @@ function exportExcel() {
     const currentNo = String(p.orderNo || "").trim(); const currentShift = String(p.shift || "").trim();
     const isDuplicate = currentNo && currentShift && orderShiftCounts[`${currentNo}-${currentShift}`] > 1;
     const orderCellValue = isDuplicate ? `${p.orderNo} (⚠️ Duplicate)` : p.orderNo;
-    return [ i + 1, orderCellValue, classifyOrder(p.orderNo), p.section || "", p.jobDescription, p.receiver, p.contactNo || "", p.isolationTime || "", p.issueTime || "", p.extendedTime || "", p.returnedTime || "", (p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated", p.status || "—", p.issuer || "" ];
+    return [ i + 1, orderCellValue, classifyOrder(p.orderNo), p.section || "", p.jobDescription, p.receiver, p.contactNo || "", p.isolationTime || "", p.issueTime || "", p.extendedTime || "", p.returnedTime || "", getPermitColumnText(p), p.status || "—", p.issuer || "" ];
   });
   const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
@@ -1060,7 +1082,7 @@ function shareReport() {
   sortedPermits.forEach((p, i) => {
     const currentNo = String(p.orderNo || "").trim(); const isDuplicate = orderCounts[currentNo] > 1;
     const orderStr = isDuplicate ? `${p.orderNo} (⚠️ Duplicate)` : p.orderNo;
-    const oType = classifyOrder(p.orderNo); const permitTypeStr = (p.isOnline === "TRUE" || p.isOnline === true) ? "Online" : "Isolated";
+    const oType = classifyOrder(p.orderNo); const permitTypeStr = getPermitColumnText(p);
     txt += `*#${i + 1} . Order No:* ${orderStr}\n▪️ *Type:* ${oType}\n▪️ *Section:* ${p.section || "—"}\n▪️ *Description:* ${p.jobDescription}\n▪️ *Receiver:* ${p.receiver} ${p.contactNo ? `(${p.contactNo})` : ""}\n▪️ *Isolation Time:* ${p.isolationTime || "—"}\n▪️ *Issue Time:* ${p.issueTime || "—"}\n▪️ *Extended Time:* ${p.extendedTime || "—"}\n▪️ *Returned Time:* ${p.returnedTime || "—"}\n▪️ *Permit Type:* ${permitTypeStr}\n▪️ *Status:* ${p.status || "—"}\n▪️ *Issued By:* ${p.issuer || "—"}\n--------------------------------------\n`;
   });
   if (navigator.share) { navigator.share({ text: txt }).catch(err => console.log(err)); } else { navigator.clipboard.writeText(txt).then(() => alert("Report text copied to clipboard!")); }
