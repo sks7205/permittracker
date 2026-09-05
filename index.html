@@ -217,7 +217,6 @@ function getPermitColumnText(p) {
   return "—";
 }
 
-
 function evalCustomFilter(p, allPermitsInContext) {
   if (!isCustomFilterActive) return true;
   if (customFilters.shifts && customFilters.shifts.length > 0) { if (!customFilters.shifts.includes(p.shift)) return false; }
@@ -460,13 +459,15 @@ function renderRequests() {
   
   const cards = requests.map(p => {
     const oType = classifyOrder(p.orderNo);
+    const isUpdate = !!(p.targetPermitId || p.requestType === "update");
     
-    return `<div class="card" style="border-left:4px solid #f59e0b;" onclick="openRequestModal('${esc(p.id)}')">
+    return `<div class="card" style="border-left:4px solid ${isUpdate ? '#ea580c' : '#f59e0b'};" onclick="openRequestModal('${esc(p.id)}')">
       <div class="card-top">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span class="card-order">${esc(p.orderNo)}</span>
           ${oType&&oType!=="—"?`<span class="badge ${orderTypeBadgeCls(oType)}">${oType}</span>`:""}
           ${p.isOnline?`<span class="badge badge-blue">Online</span>`:""}
+          ${isUpdate ? `<span class="badge badge-orange">Update Request</span>` : `<span class="badge badge-blue">New Permit</span>`}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <span class="badge badge-yellow">Pending Approval</span>
@@ -1281,7 +1282,7 @@ function permitFormHTML(title, p={}, isEdit=false, isApproveRequest=false) {
       <div class="btn-row">
         ${isEdit && isIssuer ? `<button type="button" class="btn-danger" onclick="confirmDelete()">Delete</button>`:""}
         <button type="button" class="btn-primary" id="save-btn" onclick="savePermit(${isEdit}, ${isApproveRequest})">
-          ${isApproveRequest ? "Approve Permit" : isIssuer ? (isEdit ? "Update Permit" : "Add Permit") : "Send for Approval"}
+          ${isApproveRequest ? "Approve Permit" : isIssuer ? (isEdit ? "Update Permit" : "Add Permit") : (isEdit ? "Request Update" : "Send for Approval")}
         </button>
       </div>
     </div>`;
@@ -1345,21 +1346,43 @@ async function savePermit(isEdit, isApproveRequest=false) {
   const btn = document.getElementById("save-btn");
   btn.disabled=true; btn.textContent="Processing...";
   try {
-    const permit = { orderNo, jobDescription, receiver, contactNo, section, unit, status, isOnline, isolationTime, issueTime, extendedTime, returnedTime, issuer:meta.issuer || (editingPermit ? editingPermit.issuer : ""), shiftDate:meta.date, shift:meta.shift };
+    const permit = { 
+      orderNo, jobDescription, receiver, contactNo, section, unit, 
+      status, isOnline, isolationTime, issueTime, extendedTime, returnedTime, 
+      issuer:meta.issuer || (editingPermit ? editingPermit.issuer : ""), 
+      shiftDate:meta.date, 
+      shift:meta.shift 
+    };
+
     if (isApproveRequest) {
       permit.id = editingPermit.id;
+      permit.targetPermitId = editingPermit.targetPermitId || "";
       await api("approveRequest", { permit });
     } else if (isIssuer) {
-      if (isEdit) { permit.id=editingPermit.id; await api("update",{permit}); }
-      else { await api("add",{permit}); }
+      if (isEdit) { 
+        permit.id = editingPermit.id; 
+        await api("update", { permit }); 
+      } else { 
+        await api("add", { permit }); 
+      }
     } else {
-      await api("addRequest",{permit});
-      alert("✅ Request sent to Issuer for approval.");
+      // Receiver flow
+      if (isEdit && editingPermit) {
+        permit.targetPermitId = editingPermit.id;
+        permit.requestType = "update";
+      } else {
+        permit.requestType = "new";
+      }
+      await api("addRequest", { permit });
+      alert(isEdit ? "✅ Update request sent to Issuer for approval." : "✅ Request sent to Issuer for approval.");
     }
-    removeModal(); await doRefresh();
+
+    removeModal(); 
+    await doRefresh();
   } catch(err) {
     alert("Action failed: "+err.message);
-    btn.disabled=false; btn.textContent=isApproveRequest ? "Approve Permit" : isIssuer ? (isEdit ? "Update Permit" : "Add Permit") : "Send for Approval";
+    btn.disabled=false; 
+    btn.textContent=isApproveRequest ? "Approve Permit" : isIssuer ? (isEdit ? "Update Permit" : "Add Permit") : (isEdit ? "Request Update" : "Send for Approval");
   }
 }
 
