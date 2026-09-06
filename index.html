@@ -172,11 +172,19 @@ function getAutoShift() {
 }
 
 function loadMeta() {
+  // 1. Always start by calculating the actual current date and shift
+  const currentData = { date: todayStr(), shift: getAutoShift(), issuer: "" };
+  
   try {
     const saved = localStorage.getItem("ars2_meta");
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // 2. Only grab the saved issuer name; discard the old saved date/shift
+      currentData.issuer = parsed.issuer || ""; 
+    }
   } catch(e) {}
-  return { date: todayStr(), shift: getAutoShift(), issuer: "" };
+  
+  return currentData;
 }
 let meta = loadMeta();
 let currentView = "list";
@@ -428,6 +436,16 @@ function render() {
 function renderHeader() {
   const unaccountedCount = unaccountedPermits().length;
   const alertIcon = unaccountedCount > 0 ? "🔴 " : "✅ ";
+  
+  // Calculate active requests for the current shift only
+  const activeReqsCount = requests.filter(p => {
+    const d = String(p.shiftDate || "").trim();
+    const s = String(p.shift     || "").trim();
+    if (!d || !s) return true;
+    if (!meta.shift) return d === meta.date;
+    return d === meta.date && s === meta.shift;
+  }).length;
+
   return `<div class="header">
     <div class="header-top">
       <div>
@@ -440,13 +458,22 @@ function renderHeader() {
         <button class="icon-btn" onclick="openSetup()">⚙️</button>
       </div>
     </div>
+    
+    <!-- Top Row: Standard 4 Tabs -->
     <div class="tabs">
       <button class="tab ${currentView==='list'?'active':''}" onclick="switchView('list')">Permits (${activePermits().length})</button>
       <button class="tab ${currentView==='report'?'active':''}" onclick="switchView('report')">📋 Report</button>
       <button class="tab ${currentView==='unaccounted'?'active':''}" onclick="switchView('unaccounted')">${alertIcon} Audit (${unaccountedCount})</button>
       <button class="tab ${currentView==='range_audit'?'active':''}" onclick="switchView('range_audit')">🕒 Range</button>
-      ${isIssuer ? `<button class="tab ${currentView==='requests'?'active':''}" onclick="switchView('requests')" style="color:#f59e0b;">📥 Req (${requests.length})</button>` : ""}
     </div>
+    
+    <!-- Bottom Row: Issuer Requests Tab -->
+    ${isIssuer ? `
+    <div class="tabs" style="margin-top: 8px;">
+      <button class="tab ${currentView==='requests'?'active':''}" onclick="switchView('requests')" style="color:${currentView==='requests' ? '#1e3a5f' : '#f59e0b'}; background:${currentView==='requests' ? 'white' : 'rgba(245,158,11,0.15)'}; border: 1px dashed ${currentView==='requests' ? 'transparent' : '#f59e0b'};">
+        📥 Incoming Requests (${activeReqsCount})
+      </button>
+    </div>` : ""}
   </div>`;
 }
 
@@ -455,9 +482,18 @@ function renderSyncBar() {
 }
 
 function renderRequests() {
-  if (requests.length === 0) return `<div class="empty"><div class="empty-icon">📥</div><h3>No incoming requests</h3></div>`;
+  // Filter requests to match the current selected date and shift
+  const currentReqs = requests.filter(p => {
+    const d = String(p.shiftDate || "").trim();
+    const s = String(p.shift     || "").trim();
+    if (!d || !s) return true;
+    if (!meta.shift) return d === meta.date;
+    return d === meta.date && s === meta.shift;
+  });
+
+  if (currentReqs.length === 0) return `<div class="empty"><div class="empty-icon">📥</div><h3>No incoming requests for this shift</h3></div>`;
   
-  const cards = requests.map(p => {
+  const cards = currentReqs.map(p => {
     const oType = classifyOrder(p.orderNo);
     const isUpdate = !!(p.targetPermitId || p.requestType === "update");
     
@@ -513,7 +549,14 @@ function openRequestModal(id) {
 
 async function approveRequest(id) {
   try {
-    await api("approveRequest", { id });
+    const req = requests.find(r => String(r.id) === String(id));
+    if (req) {
+      // Inject the current issuer's name before sending
+      req.issuer = meta.issuer;
+      await api("approveRequest", { permit: req });
+    } else {
+      await api("approveRequest", { id });
+    }
     await doRefresh();
   } catch(e) { alert("Failed to approve: " + e.message); }
 }
@@ -526,9 +569,20 @@ async function rejectRequest(id) {
 }
 
 async function rejectAllRequests() {
-  if (!confirm("Are you sure you want to delete all pending requests?")) return;
+  if (!confirm("Are you sure you want to delete all pending requests for THIS shift?")) return;
   try {
-    const ids = requests.map(r => r.id);
+    // Only target requests visible in the current shift
+    const currentReqs = requests.filter(p => {
+      const d = String(p.shiftDate || "").trim();
+      const s = String(p.shift     || "").trim();
+      if (!d || !s) return true;
+      if (!meta.shift) return d === meta.date;
+      return d === meta.date && s === meta.shift;
+    });
+    
+    const ids = currentReqs.map(r => r.id);
+    if (ids.length === 0) return;
+    
     await api("rejectRequests", { ids });
     await doRefresh();
   } catch(e) { alert("Failed to clear requests: " + e.message); }
