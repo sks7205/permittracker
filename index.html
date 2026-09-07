@@ -357,7 +357,15 @@ function sectionBadgeCls(s) {
   if (s==="Operation")  return "badge-green";
   return "badge-gray";
 }
-function todayStr() { const d=new Date(); return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`; }
+function todayStr() {
+  const d = new Date();
+  // Between 00:00 and 05:59, we are in the second half of C shift.
+  // Keep the shift date anchored to the day C shift started (yesterday).
+  if (d.getHours() < 6) {
+    d.setDate(d.getDate() - 1);
+  }
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+}
 function pad(n) { return String(n).padStart(2,"0"); }
 function nowTime() { return new Date().toTimeString().slice(0,5); }
 function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
