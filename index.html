@@ -1394,9 +1394,29 @@ async function savePermit(isEdit, isApproveRequest=false) {
   const issueTime      = document.getElementById("f-issueTime").value||"";
   const extendedTime   = document.getElementById("f-extTime")?.value||"";
   const returnedTime   = document.getElementById("f-retTime")?.value||"";
+
   if (!orderNo||!jobDescription||!receiver) { alert("Order No, Job Description and Receiver are required."); return; }
   if (!section) { alert("Please select a Section."); return; }
   if (!unit) { alert("Please select a Unit (ARS-2 or ARS-3)."); return; }
+
+  // ── BLOCK DUPLICATE ONLY WHEN ADDING A NEW ENTRY (ALLOW EDITING) ──
+  if (!isEdit && !isApproveRequest) {
+    const targetShift = meta.shift;
+    const targetDate  = meta.date;
+
+    const isDuplicate = permits.some(p => 
+      String(p.orderNo || "").trim() === orderNo &&
+      String(p.shiftDate || "").trim() === targetDate &&
+      String(p.shift || "").trim() === targetShift
+    );
+
+    if (isDuplicate) {
+      alert(`⚠️ Order number "${orderNo}" has already been entered in Shift ${targetShift} on ${targetDate}. Duplicate entries are not allowed.`);
+      return;
+    }
+  }
+  // ───────────────────────────────────────────────────────────────────
+
   const btn = document.getElementById("save-btn");
   btn.disabled=true; btn.textContent="Processing...";
   try {
@@ -1420,7 +1440,6 @@ async function savePermit(isEdit, isApproveRequest=false) {
         await api("add", { permit }); 
       }
     } else {
-      // Receiver flow
       if (isEdit && editingPermit) {
         permit.targetPermitId = editingPermit.id;
         permit.requestType = "update";
