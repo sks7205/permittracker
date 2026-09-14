@@ -543,7 +543,10 @@ function renderRequests() {
 
   return `
     <div style="padding:14px;">
-      <button onclick="rejectAllRequests()" style="width:100%; background:#fef2f2; color:#ef4444; border:1px solid #fecaca; padding:10px; border-radius:8px; font-weight:bold; margin-bottom:14px; cursor:pointer;">🗑️ Reject All Unapproved</button>
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        <button onclick="approveAllRequests()" style="flex:1; background:#dcfce7; color:#16a34a; border:1px solid #bbf7d0; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">✅ Approve All Pending</button>
+        <button onclick="rejectAllRequests()" style="flex:1; background:#fef2f2; color:#ef4444; border:1px solid #fecaca; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">🗑️ Reject All</button>
+      </div>
       ${cards}
     </div>`;
 }
@@ -567,6 +570,36 @@ async function approveRequest(id) {
     }
     await doRefresh();
   } catch(e) { alert("Failed to approve: " + e.message); }
+}
+
+async function approveAllRequests() {
+  const currentReqs = requests.filter(p => {
+    const d = String(p.shiftDate || "").trim();
+    const s = String(p.shift     || "").trim();
+    if (!d || !s) return true;
+    if (!meta.shift) return d === meta.date;
+    return d === meta.date && s === meta.shift;
+  });
+
+  if (currentReqs.length === 0) {
+    alert("No pending requests to approve.");
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to approve all ${currentReqs.length} pending request(s) for this shift?`)) return;
+
+  try {
+    for (const req of currentReqs) {
+      // Overwrite issuer identity with current approver before dispatching
+      req.issuer = meta.issuer;
+      await api("approveRequest", { permit: req });
+    }
+    alert("✅ All pending requests approved successfully.");
+    await doRefresh();
+  } catch(e) {
+    alert("Failed while approving requests: " + e.message);
+    await doRefresh();
+  }
 }
 
 async function rejectRequest(id) {
