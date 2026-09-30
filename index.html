@@ -156,6 +156,8 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyVf-1ymRgP3Pxy0eF4-zjD
 let permits = [];
 let requests = [];
 let isIssuer = false;
+let rangePermits = [];
+let isRangeLoading = false;
 
 try {
   const cachedPermits = localStorage.getItem("pt_cache_permits");
@@ -284,23 +286,16 @@ function getShiftScore(dateStr, shift) {
 }
 
 function getRangeUnreturnedPermits() {
-  const startScore = getShiftScore(rangeStartDate, rangeStartShift);
-  const endScore = getShiftScore(rangeEndDate, rangeEndShift);
-  if (startScore > endScore) return [];
   const targetOrdersMap = new Map();
-  permits.forEach(p => {
-    const d = String(p.shiftDate || "").trim(); const s = String(p.shift || "").trim();
-    if (!d || !s) return;
-    const itemScore = getShiftScore(d, s);
-    if (itemScore >= startScore && itemScore <= endScore) {
-      if (!targetOrdersMap.has(p.orderNo) || itemScore > getShiftScore(targetOrdersMap.get(p.orderNo).shiftDate, targetOrdersMap.get(p.orderNo).shift)) {
-        targetOrdersMap.set(p.orderNo, p);
-      }
+  rangePermits.forEach(p => {
+    if (!targetOrdersMap.has(p.orderNo)) {
+      targetOrdersMap.set(p.orderNo, p);
     }
   });
+
   const unreturnedList = [];
   for (let [orderNo, targetPermit] of targetOrdersMap) {
-    const history = permits.filter(p => String(p.orderNo).trim() === String(orderNo).trim());
+    const history = rangePermits.filter(p => String(p.orderNo).trim() === String(orderNo).trim());
     let latestPermit = history[0];
     let maxScore = getShiftScore(latestPermit.shiftDate, latestPermit.shift);
     for (let i = 1; i < history.length; i++) {
@@ -309,10 +304,14 @@ function getRangeUnreturnedPermits() {
     }
     if (latestPermit && latestPermit.status !== "returned") {
       unreturnedList.push({
-        orderNo: orderNo, jobDescription: latestPermit.jobDescription || targetPermit.jobDescription,
-        section: latestPermit.section || targetPermit.section, receiver: latestPermit.receiver || targetPermit.receiver,
-        contactNo:latestPermit.contactNo || targetPermit.contactNo, lastSeenDate: latestPermit.shiftDate,
-        lastSeenShift: latestPermit.shift, lastStatus: latestPermit.status || "Issued"
+        orderNo: orderNo,
+        jobDescription: latestPermit.jobDescription || targetPermit.jobDescription,
+        section: latestPermit.section || targetPermit.section,
+        receiver: latestPermit.receiver || targetPermit.receiver,
+        contactNo: latestPermit.contactNo || targetPermit.contactNo,
+        lastSeenDate: latestPermit.shiftDate,
+        lastSeenShift: latestPermit.shift,
+        lastStatus: latestPermit.status || "Issued"
       });
     }
   }
@@ -396,15 +395,21 @@ async function api(action, body={}) {
 }
 
 async function loadAll() {
-  const res = await api("getAll");
-  permits = (res.permits||[]).map(x=>({...x, id:String(x.id)}));
-  
+  const prev = getPreviousShift(meta.date, meta.shift);
+  const res = await api("getScopedPermits", {
+    currentDate: meta.date,
+    currentShift: meta.shift,
+    prevDate: prev ? prev.date : "",
+    prevShift: prev ? prev.shift : ""
+  });
+
+  permits = (res.permits || []).map(x => ({ ...x, id: String(x.id) }));
   isIssuer = res.isIssuer === true;
   if (isIssuer) {
-    requests = (res.requests||[]).map(x=>({...x, id:String(x.id)}));
+    requests = (res.requests || []).map(x => ({ ...x, id: String(x.id) }));
   }
-  
-  lastSync = new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+
+  lastSync = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
   localStorage.setItem("pt_cache_lastSync", lastSync);
   persistCache();
 }
