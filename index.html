@@ -1722,7 +1722,7 @@ async function init() {
   render(); 
   await doRefresh(false); 
   if (refreshTimer) clearInterval(refreshTimer);
-  refreshTimer = setInterval(() => doRefresh(true), 20000);
+  refreshTimer = setInterval(() => doRefresh(true), 0);
 }
 init();
 </script>
