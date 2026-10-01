@@ -838,8 +838,9 @@ function renderReport() {
       <p>Date: ${esc(meta.date)} &nbsp;·&nbsp; Shift: ${esc(meta.shift)}</p>
       <div style="margin-top: 8px;"><span class="badge badge-blue" style="font-size: 11px; padding: 4px 8px;">📊 ${filterLabel} (${sortedPermits.length})</span></div>
     </div>
-    <div class="report-actions">
-      <button class="btn-excel" onclick="exportExcel()">📥 Export Excel</button>
+    <div class="report-actions" style="flex-wrap: wrap;">
+      <button class="btn-excel" onclick="exportExcel()">📥 Export Excel (All Logs)</button>
+      <button class="btn-excel" onclick="exportUniqueFinalExcel()" style="background: #0284c7;">🎯 Final Status (Unique)</button>
       <button class="btn-share" onclick="shareReport()">📤 Share</button>
       <button id="capture-btn" onclick="captureReportImage()" style="background:#10b981; color:white;">📸 Save Image</button>
     </div>
@@ -976,6 +977,7 @@ function renderRangeAuditView() {
     <div class="report-actions" style="padding: 0 14px; margin-bottom: 12px; display: flex; gap: 8px;">
       <button class="btn-excel" onclick="exportRangeAuditExcel()" style="flex:1;">📥 Export Unreturned</button>
       <button class="btn-share" onclick="dumpFullRangeDataCSV()" style="flex:1; background: #7c3aed; color: white;">📊 Export Full Range</button>
+      <button class="btn-share" onclick="dumpUniqueRangeDataCSV()" style="flex:1; background: #0284c7; color: white;">🎯 Export Unique Final</button>
       <button id="range-capture-btn" onclick="captureRangeAuditImage()" style="background:#10b981; color:white; padding:11px; border-radius:10px; border:none; font-size:13px; font-weight:700; cursor:pointer; flex:1;">📸 Save Image</button>
     </div>
 
@@ -1080,6 +1082,59 @@ function dumpFullRangeDataCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = `Full_CSV_Dump_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.csv`;
   document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+}
+
+function dumpUniqueRangeDataCSV() {
+  if (rangePermits.length === 0) {
+    alert("Please click 'Fetch & Run Range Audit' first before exporting.");
+    return;
+  }
+
+  const latestByOrder = new Map();
+  rangePermits.forEach(p => {
+    const rawOrder = String(p.orderNo || "").trim();
+    if (!rawOrder) return;
+    if (!latestByOrder.has(rawOrder)) {
+      latestByOrder.set(rawOrder, p);
+    } else {
+      const existing = latestByOrder.get(rawOrder);
+      if (getShiftScore(p.shiftDate, p.shift) >= getShiftScore(existing.shiftDate, existing.shift)) {
+        latestByOrder.set(rawOrder, p);
+      }
+    }
+  });
+
+  const uniqueList = Array.from(latestByOrder.values());
+  uniqueList.sort((a, b) => getShiftScore(a.shiftDate, a.shift) - getShiftScore(b.shiftDate, b.shift));
+
+  const headers = ["Order No", "Type", "Last Date", "Last Shift", "Section", "Job Description", "Receiver", "Contact No", "Isolation Time", "Issue Time", "Extended Time", "Returned Time", "Permit Structure", "Final Status", "Issued By"];
+  const rows = uniqueList.map(p => [
+    p.orderNo || "",
+    classifyOrder(p.orderNo),
+    p.shiftDate || "",
+    p.shift || "",
+    p.section || "",
+    p.jobDescription || "",
+    p.receiver || "",
+    p.contactNo || "",
+    p.isolationTime || "—",
+    p.issueTime || "—",
+    p.extendedTime || "—",
+    p.returnedTime || "—",
+    getPermitColumnText(p),
+    p.status || "Issued",
+    p.issuer || ""
+  ]);
+
+  const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Unique_Final_Range_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.csv`;
+  document.body.appendChild(a);
+  a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
 
@@ -1237,6 +1292,112 @@ function exportExcel() {
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
 }
 
+function exportUniqueFinalExcel() {
+  const headers = [
+    "#",
+    "Order No",
+    "Type",
+    "Last Shift Date",
+    "Last Shift",
+    "Section",
+    "Job Description",
+    "Receiver",
+    "Contact",
+    "Isolation Time",
+    "Issue Time",
+    "Extended Time",
+    "Returned Time",
+    "Permit Type",
+    "Final Status",
+    "Issued By"
+  ];
+
+  const ap = activePermits();
+  if (ap.length === 0) {
+    alert("No permit data available to export.");
+    return;
+  }
+
+  // 1. Group records by Order Number and pick the latest chronological record
+  const latestByOrder = new Map();
+
+  ap.forEach(p => {
+    const rawOrder = String(p.orderNo || "").trim();
+    if (!rawOrder) return;
+
+    if (!latestByOrder.has(rawOrder)) {
+      latestByOrder.set(rawOrder, p);
+    } else {
+      const existing = latestByOrder.get(rawOrder);
+      const existingScore = getShiftScore(existing.shiftDate, existing.shift);
+      const currentScore = getShiftScore(p.shiftDate, p.shift);
+
+      // Keep whichever record appeared in the later date/shift
+      if (currentScore >= existingScore) {
+        latestByOrder.set(rawOrder, p);
+      }
+    }
+  });
+
+  const uniquePermits = Array.from(latestByOrder.values());
+
+  // 2. Sort by Section priority, then Order Type priority
+  const sectionPriority = { "Mechanical": 1, "Electrical": 2, "Operation": 3 };
+  const orderTypePriority = { "MA": 1, "M3": 2, "M4": 3, "M2": 4, "M1": 5 };
+
+  uniquePermits.sort((a, b) => {
+    const secA = a.section || "";
+    const secB = b.section || "";
+    const pSecA = sectionPriority[secA] || 99;
+    const pSecB = sectionPriority[secB] || 99;
+    if (pSecA !== pSecB) return pSecA - pSecB;
+
+    const typeA = classifyOrder(a.orderNo);
+    const typeB = classifyOrder(b.orderNo);
+    const pTypeA = orderTypePriority[typeA] || 99;
+    const pTypeB = orderTypePriority[typeB] || 99;
+    if (pTypeA !== pTypeB) return pTypeA - pTypeB;
+
+    return String(a.orderNo).localeCompare(String(b.orderNo));
+  });
+
+  // 3. Prepare CSV Rows
+  const rows = uniquePermits.map((p, i) => [
+    i + 1,
+    p.orderNo,
+    classifyOrder(p.orderNo),
+    p.shiftDate || meta.date || "",
+    p.shift || meta.shift || "",
+    p.section || "",
+    p.jobDescription || "",
+    p.receiver || "",
+    p.contactNo || "",
+    p.isolationTime || "",
+    p.issueTime || "",
+    p.extendedTime || "",
+    p.returnedTime || "",
+    getPermitColumnText(p),
+    p.status || "—",
+    p.issuer || ""
+  ]);
+
+  const csv = [headers, ...rows]
+    .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Permits_FinalStatus_Unique_${meta.date.replace(/\//g, "-")}_Shift${meta.shift || "All"}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
+}
+
 function shareReport() {
   const ap = activePermits(); const orderCounts = {};
   ap.forEach(p => { const num = String(p.orderNo || "").trim(); if (num) orderCounts[num] = (orderCounts[num] || 0) + 1; });
@@ -1313,9 +1474,24 @@ document.addEventListener("touchstart", e=>{ if (!acTarget) return; const list =
 document.addEventListener("click", e=>{ if (!acTarget) return; const list = document.getElementById(acTarget); if (list && !list.contains(e.target)) { list.style.display="none"; acTarget=null; } }, true);
 
 function onOrderInput(val) {
-    const type = classifyOrder(val); const el = document.getElementById("order-type-preview");
-    if (el) { el.innerHTML = type && type !== "-" ? `Type: <b class="badge ${orderTypeBadgeCls(type)}" style="font-size:11px">${type}</b>` : val.length > 0 ? `<span style="color:#94a3b8">No match - ${val.length} digit(s)</span>` : ""; }
-    acShow('orderNo', 'f-orderNo', 'ac-orderNo');
+  const type = classifyOrder(val);
+  const el = document.getElementById("order-type-preview");
+  const inputEl = document.getElementById("f-orderNo");
+  const validTypes = ["MA", "M1", "M2", "M3", "M4"];
+
+  if (el) {
+    if (type && validTypes.includes(type)) {
+      el.innerHTML = `Type: <b class="badge ${orderTypeBadgeCls(type)}" style="font-size:11px">${type}</b> <span style="color:#16a34a; font-size:11px; font-weight:bold;">✔ Valid Order</span>`;
+      if (inputEl) inputEl.style.borderColor = "#22c55e";
+    } else if (val.length > 0) {
+      el.innerHTML = `<span style="color:#ef4444; font-size:11px; font-weight:600;">⚠ Invalid Order Format (${val.length} digits). Must be MA (8-digit starting with 1) or M1-M4 (9-digit starting with 1-4).</span>`;
+      if (inputEl) inputEl.style.borderColor = "#ef4444";
+    } else {
+      el.innerHTML = "";
+      if (inputEl) inputEl.style.borderColor = "#e2e8f0";
+    }
+  }
+  acShow('orderNo', 'f-orderNo', 'ac-orderNo');
 }
 function selectSection(sec) {
   const h=document.getElementById("f-section"); if(h) h.value=sec;
@@ -1521,7 +1697,31 @@ async function savePermit(isEdit, isApproveRequest=false) {
   const extendedTime   = document.getElementById("f-extTime")?.value||"";
   const returnedTime   = document.getElementById("f-retTime")?.value||"";
 
-  if (!orderNo||!jobDescription||!receiver) { alert("Order No, Job Description and Receiver are required."); return; }
+  if (!orderNo || !jobDescription || !receiver) {
+    alert("Order No, Job Description and Receiver are required.");
+    return;
+  }
+
+  // Strict Order Number validation based on classifyOrder logic
+  const orderType = classifyOrder(orderNo);
+  const validTypes = ["MA", "M1", "M2", "M3", "M4"];
+  if (!orderType || !validTypes.includes(orderType)) {
+    alert(
+      "❌ Invalid Order Number!\n\n" +
+      "Order Number must match valid SAP patterns:\n" +
+      "• MA: 8 digits starting with 1 (e.g. 10000000)\n" +
+      "• M1: 9 digits starting with 1 (e.g. 100000000)\n" +
+      "• M2: 9 digits starting with 2 (e.g. 200000000)\n" +
+      "• M3: 9 digits starting with 3 (e.g. 300000000)\n" +
+      "• M4: 9 digits starting with 4 (e.g. 400000000)"
+    );
+    const orderInput = document.getElementById("f-orderNo");
+    if (orderInput) {
+      orderInput.focus();
+      orderInput.style.borderColor = "#ef4444";
+    }
+    return;
+  }
   if (!section) { alert("Please select a Section."); return; }
   if (!unit) { alert("Please select a Unit (ARS-2 or ARS-3)."); return; }
 
