@@ -152,21 +152,9 @@
 // ══════════════════════════════════════
 const API_URL = "https://script.google.com/macros/s/AKfycbyVf-1ymRgP3Pxy0eF4-zjD_nNHdVEpgOgB12i2QjCLJeRwB6n9h6VoreVteCKDaYcX/exec"; 
 
-// Instant Offline Cache Hydration
 let permits = [];
-let requests = [];
-let isIssuer = false;
-let rangePermits = [];
-let isRangeLoading = false;
-
-try {
-  const cachedPermits = localStorage.getItem("pt_cache_permits");
-  if (cachedPermits) permits = JSON.parse(cachedPermits);
-  const cachedRequests = localStorage.getItem("pt_cache_requests");
-  if (cachedRequests) requests = JSON.parse(cachedRequests);
-  const cachedIssuer = localStorage.getItem("pt_cache_isIssuer");
-  if (cachedIssuer !== null) isIssuer = cachedIssuer === "true";
-} catch(e) {}
+let requests = [];     
+let isIssuer = false;  
 
 if (!localStorage.getItem("DEVICE_TOKEN")) {
   const arr = new Uint8Array(16);
@@ -176,14 +164,6 @@ if (!localStorage.getItem("DEVICE_TOKEN")) {
 }
 const DEVICE_TOKEN = localStorage.getItem("DEVICE_TOKEN");
 
-function persistCache() {
-  try {
-    localStorage.setItem("pt_cache_permits", JSON.stringify(permits));
-    localStorage.setItem("pt_cache_requests", JSON.stringify(requests));
-    localStorage.setItem("pt_cache_isIssuer", String(isIssuer));
-  } catch(e) {}
-}
-
 function getAutoShift() {
   const h = new Date().getHours();
   if (h >= 6 && h < 14) return "A";
@@ -192,17 +172,20 @@ function getAutoShift() {
 }
 
 function loadMeta() {
+  // 1. Always start by calculating the actual current date and shift
   const currentData = { date: todayStr(), shift: getAutoShift(), issuer: "" };
+  
   try {
     const saved = localStorage.getItem("ars2_meta");
     if (saved) {
       const parsed = JSON.parse(saved);
+      // 2. Only grab the saved issuer name; discard the old saved date/shift
       currentData.issuer = parsed.issuer || ""; 
     }
   } catch(e) {}
+  
   return currentData;
 }
-
 let meta = loadMeta();
 let currentView = "list";
 let sectionFilter = "ALL";
@@ -210,7 +193,7 @@ let isCustomFilterActive = false;
 let customFilters = { shifts: [], orderTypes: [], sections: [], receivers: [], status: "", unit: "" };
 let editingPermit = null;
 let syncing = false;
-let lastSync = localStorage.getItem("pt_cache_lastSync") || null;
+let lastSync = null;
 let refreshTimer = null;
 
 let rangeStartDate = "";
@@ -286,16 +269,23 @@ function getShiftScore(dateStr, shift) {
 }
 
 function getRangeUnreturnedPermits() {
+  const startScore = getShiftScore(rangeStartDate, rangeStartShift);
+  const endScore = getShiftScore(rangeEndDate, rangeEndShift);
+  if (startScore > endScore) return [];
   const targetOrdersMap = new Map();
-  rangePermits.forEach(p => {
-    if (!targetOrdersMap.has(p.orderNo)) {
-      targetOrdersMap.set(p.orderNo, p);
+  permits.forEach(p => {
+    const d = String(p.shiftDate || "").trim(); const s = String(p.shift || "").trim();
+    if (!d || !s) return;
+    const itemScore = getShiftScore(d, s);
+    if (itemScore >= startScore && itemScore <= endScore) {
+      if (!targetOrdersMap.has(p.orderNo) || itemScore > getShiftScore(targetOrdersMap.get(p.orderNo).shiftDate, targetOrdersMap.get(p.orderNo).shift)) {
+        targetOrdersMap.set(p.orderNo, p);
+      }
     }
   });
-
   const unreturnedList = [];
   for (let [orderNo, targetPermit] of targetOrdersMap) {
-    const history = rangePermits.filter(p => String(p.orderNo).trim() === String(orderNo).trim());
+    const history = permits.filter(p => String(p.orderNo).trim() === String(orderNo).trim());
     let latestPermit = history[0];
     let maxScore = getShiftScore(latestPermit.shiftDate, latestPermit.shift);
     for (let i = 1; i < history.length; i++) {
@@ -304,14 +294,10 @@ function getRangeUnreturnedPermits() {
     }
     if (latestPermit && latestPermit.status !== "returned") {
       unreturnedList.push({
-        orderNo: orderNo,
-        jobDescription: latestPermit.jobDescription || targetPermit.jobDescription,
-        section: latestPermit.section || targetPermit.section,
-        receiver: latestPermit.receiver || targetPermit.receiver,
-        contactNo: latestPermit.contactNo || targetPermit.contactNo,
-        lastSeenDate: latestPermit.shiftDate,
-        lastSeenShift: latestPermit.shift,
-        lastStatus: latestPermit.status || "Issued"
+        orderNo: orderNo, jobDescription: latestPermit.jobDescription || targetPermit.jobDescription,
+        section: latestPermit.section || targetPermit.section, receiver: latestPermit.receiver || targetPermit.receiver,
+        contactNo:latestPermit.contactNo || targetPermit.contactNo, lastSeenDate: latestPermit.shiftDate,
+        lastSeenShift: latestPermit.shift, lastStatus: latestPermit.status || "Issued"
       });
     }
   }
@@ -373,6 +359,8 @@ function sectionBadgeCls(s) {
 }
 function todayStr() {
   const d = new Date();
+  // Between 00:00 and 05:59, we are in the second half of C shift.
+  // Keep the shift date anchored to the day C shift started (yesterday).
   if (d.getHours() < 6) {
     d.setDate(d.getDate() - 1);
   }
@@ -395,23 +383,15 @@ async function api(action, body={}) {
 }
 
 async function loadAll() {
-  const prev = getPreviousShift(meta.date, meta.shift);
-  const res = await api("getScopedPermits", {
-    currentDate: meta.date,
-    currentShift: meta.shift,
-    prevDate: prev ? prev.date : "",
-    prevShift: prev ? prev.shift : ""
-  });
-
-  permits = (res.permits || []).map(x => ({ ...x, id: String(x.id) }));
+  const res = await api("getAll");
+  permits = (res.permits||[]).map(x=>({...x, id:String(x.id)}));
+  
   isIssuer = res.isIssuer === true;
   if (isIssuer) {
-    requests = (res.requests || []).map(x => ({ ...x, id: String(x.id) }));
+    requests = (res.requests||[]).map(x=>({...x, id:String(x.id)}));
   }
-
-  lastSync = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-  localStorage.setItem("pt_cache_lastSync", lastSync);
-  persistCache();
+  
+  lastSync = new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
 }
 
 // ══════════════════════════════════════
@@ -465,6 +445,7 @@ function renderHeader() {
   const unaccountedCount = unaccountedPermits().length;
   const alertIcon = unaccountedCount > 0 ? "🔴 " : "✅ ";
   
+  // Calculate active requests for the current shift only
   const activeReqsCount = requests.filter(p => {
     const d = String(p.shiftDate || "").trim();
     const s = String(p.shift     || "").trim();
@@ -509,6 +490,7 @@ function renderSyncBar() {
 }
 
 function renderRequests() {
+  // Filter requests to match the current selected date and shift
   const currentReqs = requests.filter(p => {
     const d = String(p.shiftDate || "").trim();
     const s = String(p.shift     || "").trim();
@@ -580,25 +562,14 @@ async function approveRequest(id) {
   try {
     const req = requests.find(r => String(r.id) === String(id));
     if (req) {
+      // Inject the current issuer's name before sending
       req.issuer = meta.issuer;
-      
-      // Optimistic Instant Local State Update
-      requests = requests.filter(r => String(r.id) !== String(id));
-      const targetId = req.targetPermitId;
-      if (targetId) {
-        permits = permits.map(p => String(p.id) === String(targetId) ? { ...req, id: targetId } : p);
-      } else {
-        permits.unshift({ ...req, id: req.id || "TMP-" + Date.now() });
-      }
-      persistCache();
-      render();
-
       await api("approveRequest", { permit: req });
     } else {
       await api("approveRequest", { id });
     }
     await doRefresh();
-  } catch(e) { alert("Failed to approve: " + e.message); await doRefresh(); }
+  } catch(e) { alert("Failed to approve: " + e.message); }
 }
 
 async function approveAllRequests() {
@@ -618,22 +589,9 @@ async function approveAllRequests() {
   if (!confirm(`Are you sure you want to approve all ${currentReqs.length} pending request(s) for this shift?`)) return;
 
   try {
-    // Optimistic Local State Update
-    const currentReqIds = new Set(currentReqs.map(r => String(r.id)));
-    requests = requests.filter(r => !currentReqIds.has(String(r.id)));
-    currentReqs.forEach(req => {
-      req.issuer = meta.issuer;
-      const targetId = req.targetPermitId;
-      if (targetId) {
-        permits = permits.map(p => String(p.id) === String(targetId) ? { ...req, id: targetId } : p);
-      } else {
-        permits.unshift({ ...req, id: req.id || "TMP-" + Date.now() });
-      }
-    });
-    persistCache();
-    render();
-
     for (const req of currentReqs) {
+      // Overwrite issuer identity with current approver before dispatching
+      req.issuer = meta.issuer;
       await api("approveRequest", { permit: req });
     }
     alert("✅ All pending requests approved successfully.");
@@ -646,17 +604,15 @@ async function approveAllRequests() {
 
 async function rejectRequest(id) {
   try {
-    requests = requests.filter(r => String(r.id) !== String(id));
-    persistCache();
-    render();
     await api("rejectRequests", { ids: [id] });
     await doRefresh();
-  } catch(e) { alert("Failed to reject: " + e.message); await doRefresh(); }
+  } catch(e) { alert("Failed to reject: " + e.message); }
 }
 
 async function rejectAllRequests() {
   if (!confirm("Are you sure you want to delete all pending requests for THIS shift?")) return;
   try {
+    // Only target requests visible in the current shift
     const currentReqs = requests.filter(p => {
       const d = String(p.shiftDate || "").trim();
       const s = String(p.shift     || "").trim();
@@ -668,14 +624,9 @@ async function rejectAllRequests() {
     const ids = currentReqs.map(r => r.id);
     if (ids.length === 0) return;
     
-    const idSet = new Set(ids.map(String));
-    requests = requests.filter(r => !idSet.has(String(r.id)));
-    persistCache();
-    render();
-
     await api("rejectRequests", { ids });
     await doRefresh();
-  } catch(e) { alert("Failed to clear requests: " + e.message); await doRefresh(); }
+  } catch(e) { alert("Failed to clear requests: " + e.message); }
 }
 
 function renderSectionFilter() {
@@ -746,7 +697,7 @@ function renderList() {
           <span class="card-order">${esc(p.orderNo)}</span>
           ${oType&&oType!=="—"?`<span class="badge ${orderTypeBadgeCls(oType)}">${oType}</span>`:""}
           ${p.isOnline?`<span class="badge badge-blue">Online</span>`:""}
-          ${isDuplicate ? `<span class="badge badge-duplicate">⚠️️ Duplicate (${shiftCount}x)</span>` : ""}
+          ${isDuplicate ? `<span class="badge badge-duplicate">⚠️ Duplicate (${shiftCount}x)</span>` : ""}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <span class="badge ${stCls}">${status}</span>
@@ -1079,7 +1030,7 @@ async function captureRangeAuditImage() {
         if (isIOS) {
             const newWindow = window.open();
             if (newWindow) {
-                newWindow.document.write(`<html><head><title>Range Audit Preview</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; } img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); } .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,200,0.2); border-radius: 20px; font-size: 14px; }</style></head><body><div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div><img src="${imageUri}" alt="Range Audit Report" /></body></html>`);
+                newWindow.document.write(`<html><head><title>Range Audit Preview</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; } img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); } .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 14px; }</style></head><body><div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div><img src="${imageUri}" alt="Range Audit Report" /></body></html>`);
                 newWindow.document.close();
             } else { alert("Pop-up blocked! Please allow pop-ups for this site to view/save the report image."); }
         } else {
@@ -1469,7 +1420,7 @@ async function processScan(input) {
 }
 
 // ══════════════════════════════════════
-//  SAVE / DELETE (OPTIMISTIC INSTANT UPDATE)
+//  SAVE / DELETE
 // ══════════════════════════════════════
 async function savePermit(isEdit, isApproveRequest=false) {
   const orderNo        = document.getElementById("f-orderNo").value.trim();
@@ -1489,6 +1440,7 @@ async function savePermit(isEdit, isApproveRequest=false) {
   if (!section) { alert("Please select a Section."); return; }
   if (!unit) { alert("Please select a Unit (ARS-2 or ARS-3)."); return; }
 
+  // ── BLOCK DUPLICATE ONLY WHEN ADDING A NEW ENTRY (ALLOW EDITING) ──
   if (!isEdit && !isApproveRequest) {
     const targetShift = meta.shift;
     const targetDate  = meta.date;
@@ -1504,39 +1456,29 @@ async function savePermit(isEdit, isApproveRequest=false) {
       return;
     }
   }
+  // ───────────────────────────────────────────────────────────────────
 
   const btn = document.getElementById("save-btn");
   btn.disabled=true; btn.textContent="Processing...";
-  
-  // Create snapshots for rollback in case backend errors
-  const prevPermitsSnapshot = [...permits];
-  const prevRequestsSnapshot = [...requests];
-
   try {
     const permit = { 
       orderNo, jobDescription, receiver, contactNo, section, unit, 
       status, isOnline, isolationTime, issueTime, extendedTime, returnedTime, 
-      issuer: meta.issuer || (editingPermit ? editingPermit.issuer : ""), 
-      shiftDate: (editingPermit && isEdit) ? editingPermit.shiftDate : meta.date, 
-      shift: (editingPermit && isEdit) ? editingPermit.shift : meta.shift 
+      issuer:meta.issuer || (editingPermit ? editingPermit.issuer : ""), 
+      shiftDate:meta.date, 
+      shift:meta.shift 
     };
 
     if (isApproveRequest) {
       permit.id = editingPermit.id;
       permit.targetPermitId = editingPermit.targetPermitId || "";
-      requests = requests.filter(r => String(r.id) !== String(editingPermit.id));
-      if (permit.targetPermitId) {
-        permits = permits.map(p => String(p.id) === String(permit.targetPermitId) ? { ...permit, id: permit.targetPermitId } : p);
-      } else {
-        permits.unshift(permit);
-      }
+      await api("approveRequest", { permit });
     } else if (isIssuer) {
       if (isEdit) { 
         permit.id = editingPermit.id; 
-        permits = permits.map(p => String(p.id) === String(permit.id) ? { ...p, ...permit } : p);
+        await api("update", { permit }); 
       } else { 
-        permit.id = "TMP-" + Date.now();
-        permits.unshift(permit);
+        await api("add", { permit }); 
       }
     } else {
       if (isEdit && editingPermit) {
@@ -1545,39 +1487,16 @@ async function savePermit(isEdit, isApproveRequest=false) {
       } else {
         permit.requestType = "new";
       }
-      permit.id = "REQ-" + Date.now();
-      requests.unshift(permit);
+      await api("addRequest", { permit });
       alert(isEdit ? "✅ Update request sent to Issuer for approval." : "✅ Request sent to Issuer for approval.");
     }
 
-    persistCache();
     removeModal(); 
-    render();
-
-    // Background Async Sync
-    if (isApproveRequest) {
-      await api("approveRequest", { permit });
-    } else if (isIssuer) {
-      if (isEdit) { 
-        await api("update", { permit }); 
-      } else { 
-        await api("add", { permit }); 
-      }
-    } else {
-      await api("addRequest", { permit });
-    }
-
     await doRefresh();
   } catch(err) {
-    permits = prevPermitsSnapshot;
-    requests = prevRequestsSnapshot;
-    persistCache();
-    render();
     alert("Action failed: "+err.message);
-    if (btn) {
-      btn.disabled=false; 
-      btn.textContent=isApproveRequest ? "Approve Permit" : isIssuer ? (isEdit ? "Update Permit" : "Add Permit") : (isEdit ? "Request Update" : "Send for Approval");
-    }
+    btn.disabled=false; 
+    btn.textContent=isApproveRequest ? "Approve Permit" : isIssuer ? (isEdit ? "Update Permit" : "Add Permit") : (isEdit ? "Request Update" : "Send for Approval");
   }
 }
 
@@ -1586,23 +1505,8 @@ async function confirmDelete() {
   if (password === null) return; 
   if (password !== "sherlockholmes1") { alert("❌ Incorrect password. Access denied. Contact admin"); return; }
   if (!confirm("Are you absolutely sure you want to delete this permit entry?")) return;
-  
-  const idToDelete = editingPermit.id;
-  const prevPermitsSnapshot = [...permits];
-  
-  try { 
-    permits = permits.filter(p => String(p.id) !== String(idToDelete));
-    persistCache();
-    removeModal(); 
-    render();
-    await api("delete", { id: idToDelete }); 
-    await doRefresh(); 
-  } catch(err) { 
-    permits = prevPermitsSnapshot;
-    persistCache();
-    render();
-    alert("Delete failed: "+err.message); 
-  }
+  try { await api("delete",{id:editingPermit.id}); removeModal(); await doRefresh(); } 
+  catch(err) { alert("Delete failed: "+err.message); }
 }
 
 function openAdd() {
@@ -1711,13 +1615,6 @@ async function doRefresh(isAuto = false) {
   syncing = false;
   render();
 }
-
-// Instant re-sync when switching back into the browser tab
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") doRefresh(true);
-});
-window.addEventListener("focus", () => doRefresh(true));
-
 async function init() {
   render(); 
   await doRefresh(false); 
