@@ -394,12 +394,21 @@ async function api(action, body={}) {
 
 async function loadAll() {
   const prev = getPreviousShift(meta.date, meta.shift);
-  const res = await api("getScopedPermits", {
-    currentDate: meta.date,
-    currentShift: meta.shift,
-    prevDate: prev ? prev.date : "",
-    prevShift: prev ? prev.shift : ""
-  });
+  let res;
+  
+  try {
+    // Attempt fast scoped sync first
+    res = await api("getScopedPermits", {
+      currentDate: meta.date,
+      currentShift: meta.shift,
+      prevDate: prev ? prev.date : "",
+      prevShift: prev ? prev.shift : ""
+    });
+  } catch (err) {
+    // Graceful fallback to getAll if backend hasn't been updated yet
+    console.warn("getScopedPermits unavailable, falling back to getAll:", err.message);
+    res = await api("getAll");
+  }
 
   permits = (res.permits || []).map(x => ({ ...x, id: String(x.id) }));
   isIssuer = res.isIssuer === true;
