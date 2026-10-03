@@ -154,21 +154,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyVf-1ymRgP3Pxy0eF4-zjD
 
 let permits = [];
 let requests = [];     
-let isIssuer = false;
-
-// Range loader state
-let rangePermits = [];
-let isRangeLoading = false;
-
-// Instant Offline Cache Hydration
-try {
-  const cachedPermits = localStorage.getItem("pt_cache_permits");
-  if (cachedPermits) permits = JSON.parse(cachedPermits);
-  const cachedRequests = localStorage.getItem("pt_cache_requests");
-  if (cachedRequests) requests = JSON.parse(cachedRequests);
-  const cachedIssuer = localStorage.getItem("pt_cache_isIssuer");
-  if (cachedIssuer !== null) isIssuer = cachedIssuer === "true";
-} catch(e) {}
+let isIssuer = false;  
 
 if (!localStorage.getItem("DEVICE_TOKEN")) {
   const arr = new Uint8Array(16);
@@ -178,14 +164,6 @@ if (!localStorage.getItem("DEVICE_TOKEN")) {
 }
 const DEVICE_TOKEN = localStorage.getItem("DEVICE_TOKEN");
 
-function persistCache() {
-  try {
-    localStorage.setItem("pt_cache_permits", JSON.stringify(permits));
-    localStorage.setItem("pt_cache_requests", JSON.stringify(requests));
-    localStorage.setItem("pt_cache_isIssuer", String(isIssuer));
-  } catch(e) {}
-}
-
 function getAutoShift() {
   const h = new Date().getHours();
   if (h >= 6 && h < 14) return "A";
@@ -194,14 +172,18 @@ function getAutoShift() {
 }
 
 function loadMeta() {
+  // 1. Always start by calculating the actual current date and shift
   const currentData = { date: todayStr(), shift: getAutoShift(), issuer: "" };
+  
   try {
     const saved = localStorage.getItem("ars2_meta");
     if (saved) {
       const parsed = JSON.parse(saved);
+      // 2. Only grab the saved issuer name; discard the old saved date/shift
       currentData.issuer = parsed.issuer || ""; 
     }
   } catch(e) {}
+  
   return currentData;
 }
 let meta = loadMeta();
@@ -211,9 +193,8 @@ let isCustomFilterActive = false;
 let customFilters = { shifts: [], orderTypes: [], sections: [], receivers: [], status: "", unit: "" };
 let editingPermit = null;
 let syncing = false;
-let lastSync = localStorage.getItem("pt_cache_lastSync") || null;
+let lastSync = null;
 let refreshTimer = null;
-let isPollingActive = false;
 
 let rangeStartDate = "";
 let rangeEndDate = "";
@@ -223,6 +204,25 @@ let rangeEndShift = "C";
 // ══════════════════════════════════════
 //  HELPERS
 // ══════════════════════════════════════
+
+function saveLocalCache() {
+  try {
+    localStorage.setItem("cached_permits", JSON.stringify(permits));
+    localStorage.setItem("cached_requests", JSON.stringify(requests));
+  } catch(e) {
+    console.warn("Storage quota exceeded or error caching:", e);
+  }
+}
+
+function loadLocalCache() {
+  try {
+    const cp = localStorage.getItem("cached_permits");
+    if (cp) permits = JSON.parse(cp);
+    const cr = localStorage.getItem("cached_requests");
+    if (cr) requests = JSON.parse(cr);
+  } catch(e) {}
+}
+
 
 function getPermitColumnText(p) {
   const isOnline = (p.isOnline === "TRUE" || p.isOnline === true);
@@ -288,16 +288,23 @@ function getShiftScore(dateStr, shift) {
 }
 
 function getRangeUnreturnedPermits() {
+  const startScore = getShiftScore(rangeStartDate, rangeStartShift);
+  const endScore = getShiftScore(rangeEndDate, rangeEndShift);
+  if (startScore > endScore) return [];
   const targetOrdersMap = new Map();
-  rangePermits.forEach(p => {
-    if (!targetOrdersMap.has(p.orderNo)) {
-      targetOrdersMap.set(p.orderNo, p);
+  permits.forEach(p => {
+    const d = String(p.shiftDate || "").trim(); const s = String(p.shift || "").trim();
+    if (!d || !s) return;
+    const itemScore = getShiftScore(d, s);
+    if (itemScore >= startScore && itemScore <= endScore) {
+      if (!targetOrdersMap.has(p.orderNo) || itemScore > getShiftScore(targetOrdersMap.get(p.orderNo).shiftDate, targetOrdersMap.get(p.orderNo).shift)) {
+        targetOrdersMap.set(p.orderNo, p);
+      }
     }
   });
-
   const unreturnedList = [];
   for (let [orderNo, targetPermit] of targetOrdersMap) {
-    const history = rangePermits.filter(p => String(p.orderNo).trim() === String(orderNo).trim());
+    const history = permits.filter(p => String(p.orderNo).trim() === String(orderNo).trim());
     let latestPermit = history[0];
     let maxScore = getShiftScore(latestPermit.shiftDate, latestPermit.shift);
     for (let i = 1; i < history.length; i++) {
@@ -371,6 +378,8 @@ function sectionBadgeCls(s) {
 }
 function todayStr() {
   const d = new Date();
+  // Between 00:00 and 05:59, we are in the second half of C shift.
+  // Keep the shift date anchored to the day C shift started (yesterday).
   if (d.getHours() < 6) {
     d.setDate(d.getDate() - 1);
   }
@@ -381,7 +390,7 @@ function nowTime() { return new Date().toTimeString().slice(0,5); }
 function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 // ══════════════════════════════════════
-//  API & SCOPED FAST SYNC
+//  API
 // ══════════════════════════════════════
 async function api(action, body={}) {
   const res = await fetch(API_URL, {
@@ -393,32 +402,16 @@ async function api(action, body={}) {
 }
 
 async function loadAll() {
-  const prev = getPreviousShift(meta.date, meta.shift);
-  let res;
-  
-  try {
-    // Attempt fast scoped sync first
-    res = await api("getScopedPermits", {
-      currentDate: meta.date,
-      currentShift: meta.shift,
-      prevDate: prev ? prev.date : "",
-      prevShift: prev ? prev.shift : ""
-    });
-  } catch (err) {
-    // Graceful fallback to getAll if backend hasn't been updated yet
-    console.warn("getScopedPermits unavailable, falling back to getAll:", err.message);
-    res = await api("getAll");
-  }
-
+  const res = await api("getAll");
   permits = (res.permits || []).map(x => ({ ...x, id: String(x.id) }));
+  
   isIssuer = res.isIssuer === true;
   if (isIssuer) {
     requests = (res.requests || []).map(x => ({ ...x, id: String(x.id) }));
   }
-
+  
   lastSync = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-  localStorage.setItem("pt_cache_lastSync", lastSync);
-  persistCache();
+  saveLocalCache();
 }
 
 // ══════════════════════════════════════
@@ -472,6 +465,7 @@ function renderHeader() {
   const unaccountedCount = unaccountedPermits().length;
   const alertIcon = unaccountedCount > 0 ? "🔴 " : "✅ ";
   
+  // Calculate active requests for the current shift only
   const activeReqsCount = requests.filter(p => {
     const d = String(p.shiftDate || "").trim();
     const s = String(p.shift     || "").trim();
@@ -493,6 +487,7 @@ function renderHeader() {
       </div>
     </div>
     
+    <!-- Top Row: Standard 4 Tabs -->
     <div class="tabs">
       <button class="tab ${currentView==='list'?'active':''}" onclick="switchView('list')">Permits (${activePermits().length})</button>
       <button class="tab ${currentView==='report'?'active':''}" onclick="switchView('report')">📋 Report</button>
@@ -500,6 +495,7 @@ function renderHeader() {
       <button class="tab ${currentView==='range_audit'?'active':''}" onclick="switchView('range_audit')">🕒 Range</button>
     </div>
     
+    <!-- Bottom Row: Issuer Requests Tab -->
     ${isIssuer ? `
     <div class="tabs" style="margin-top: 8px;">
       <button class="tab ${currentView==='requests'?'active':''}" onclick="switchView('requests')" style="color:${currentView==='requests' ? '#1e3a5f' : '#f59e0b'}; background:${currentView==='requests' ? 'white' : 'rgba(245,158,11,0.15)'}; border: 1px dashed ${currentView==='requests' ? 'transparent' : '#f59e0b'};">
@@ -510,10 +506,11 @@ function renderHeader() {
 }
 
 function renderSyncBar() {
-  return `<div class="sync-bar">${lastSync?`Last synced ${lastSync} · Auto-refresh active`:"Connecting..."}</div>`;
+  return `<div class="sync-bar">${lastSync?`Last synced ${lastSync} · Auto-refresh 20s`:"Connecting..."}</div>`;
 }
 
 function renderRequests() {
+  // Filter requests to match the current selected date and shift
   const currentReqs = requests.filter(p => {
     const d = String(p.shiftDate || "").trim();
     const s = String(p.shift     || "").trim();
@@ -581,30 +578,49 @@ function openRequestModal(id) {
   showModal(permitFormHTML("Review Request Permit", req, false, true));
 }
 
-async function approveRequest(id) {
-  try {
-    const req = requests.find(r => String(r.id) === String(id));
-    if (req) {
-      req.issuer = meta.issuer;
-      requests = requests.filter(r => String(r.id) !== String(id));
-      const targetId = req.targetPermitId;
-      if (targetId) {
-        permits = permits.map(p => String(p.id) === String(targetId) ? { ...req, id: targetId } : p);
-      } else {
-        permits.unshift({ ...req, id: req.id || "TMP-" + Date.now() });
-      }
-      persistCache();
-      render();
+function approveRequest(id) {
+  const req = requests.find(r => String(r.id) === String(id));
+  if (!req) return;
 
-      await api("approveRequest", { permit: req });
-    } else {
-      await api("approveRequest", { id });
-    }
-    await doRefresh();
-  } catch(e) { alert("Failed to approve: " + e.message); await doRefresh(); }
+  // 1. Optimistic Local Commit
+  requests = requests.filter(r => String(r.id) !== String(id));
+  const approvedPermit = { ...req, issuer: meta.issuer };
+  const targetId = approvedPermit.targetPermitId || approvedPermit.id;
+  const pIdx = permits.findIndex(p => String(p.id) === String(targetId));
+  if (pIdx >= 0) {
+    permits[pIdx] = approvedPermit;
+  } else {
+    permits.unshift(approvedPermit);
+  }
+
+  saveLocalCache();
+  render();
+
+  // 2. Backend sync in background
+  api("approveRequest", { permit: approvedPermit })
+    .then(() => doRefresh(true))
+    .catch(err => {
+      alert("Failed to sync approval: " + err.message);
+      doRefresh(false);
+    });
 }
 
-async function approveAllRequests() {
+function rejectRequest(id) {
+  // 1. Optimistic Local Delete
+  requests = requests.filter(r => String(r.id) !== String(id));
+  saveLocalCache();
+  render();
+
+  // 2. Background sync
+  api("rejectRequests", { ids: [id] })
+    .then(() => doRefresh(true))
+    .catch(err => {
+      alert("Failed to sync rejection: " + err.message);
+      doRefresh(false);
+    });
+}
+
+function approveAllRequests() {
   const currentReqs = requests.filter(p => {
     const d = String(p.shiftDate || "").trim();
     const s = String(p.shift     || "").trim();
@@ -620,64 +636,62 @@ async function approveAllRequests() {
 
   if (!confirm(`Are you sure you want to approve all ${currentReqs.length} pending request(s) for this shift?`)) return;
 
-  try {
-    const currentReqIds = new Set(currentReqs.map(r => String(r.id)));
-    requests = requests.filter(r => !currentReqIds.has(String(r.id)));
-    currentReqs.forEach(req => {
-      req.issuer = meta.issuer;
-      const targetId = req.targetPermitId;
-      if (targetId) {
-        permits = permits.map(p => String(p.id) === String(targetId) ? { ...req, id: targetId } : p);
-      } else {
-        permits.unshift({ ...req, id: req.id || "TMP-" + Date.now() });
+  // 1. Optimistically commit all to local permits
+  const currentIds = new Set(currentReqs.map(r => String(r.id)));
+  requests = requests.filter(r => !currentIds.has(String(r.id)));
+
+  currentReqs.forEach(req => {
+    const approvedPermit = { ...req, issuer: meta.issuer };
+    const targetId = approvedPermit.targetPermitId || approvedPermit.id;
+    const pIdx = permits.findIndex(p => String(p.id) === String(targetId));
+    if (pIdx >= 0) permits[pIdx] = approvedPermit;
+    else permits.unshift(approvedPermit);
+  });
+
+  saveLocalCache();
+  render();
+
+  // 2. Sync to server in background
+  (async () => {
+    try {
+      for (const req of currentReqs) {
+        req.issuer = meta.issuer;
+        await api("approveRequest", { permit: req });
       }
-    });
-    persistCache();
-    render();
-
-    for (const req of currentReqs) {
-      await api("approveRequest", { permit: req });
+      await doRefresh(true);
+    } catch(e) {
+      alert("Failed while syncing approvals: " + e.message);
+      await doRefresh(false);
     }
-    alert("✅ All pending requests approved successfully.");
-    await doRefresh();
-  } catch(e) {
-    alert("Failed while approving requests: " + e.message);
-    await doRefresh();
-  }
+  })();
 }
 
-async function rejectRequest(id) {
-  try {
-    requests = requests.filter(r => String(r.id) !== String(id));
-    persistCache();
-    render();
-    await api("rejectRequests", { ids: [id] });
-    await doRefresh();
-  } catch(e) { alert("Failed to reject: " + e.message); await doRefresh(); }
-}
+function rejectAllRequests() {
+  const currentReqs = requests.filter(p => {
+    const d = String(p.shiftDate || "").trim();
+    const s = String(p.shift     || "").trim();
+    if (!d || !s) return true;
+    if (!meta.shift) return d === meta.date;
+    return d === meta.date && s === meta.shift;
+  });
 
-async function rejectAllRequests() {
+  const ids = currentReqs.map(r => r.id);
+  if (ids.length === 0) return;
   if (!confirm("Are you sure you want to delete all pending requests for THIS shift?")) return;
-  try {
-    const currentReqs = requests.filter(p => {
-      const d = String(p.shiftDate || "").trim();
-      const s = String(p.shift     || "").trim();
-      if (!d || !s) return true;
-      if (!meta.shift) return d === meta.date;
-      return d === meta.date && s === meta.shift;
-    });
-    
-    const ids = currentReqs.map(r => r.id);
-    if (ids.length === 0) return;
-    
-    const idSet = new Set(ids.map(String));
-    requests = requests.filter(r => !idSet.has(String(r.id)));
-    persistCache();
-    render();
 
-    await api("rejectRequests", { ids });
-    await doRefresh();
-  } catch(e) { alert("Failed to clear requests: " + e.message); await doRefresh(); }
+  // 1. Optimistic remove
+  const idSet = new Set(ids.map(String));
+  requests = requests.filter(r => !idSet.has(String(r.id)));
+  saveLocalCache();
+  render();
+
+  // 2. Background sync
+  api("rejectRequests", { ids })
+    .then(() => doRefresh(true))
+    .catch(err => {
+      alert("Failed to clear requests: " + err.message);
+      doRefresh(false);
+    });
 }
 
 function renderSectionFilter() {
@@ -930,69 +944,54 @@ function renderRangeAuditView() {
     <div id="range-audit-selectors" style="padding: 14px; background: white; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
       <h3 style="font-size: 14px; font-weight: 800; color: #1e3a5f; margin-bottom: 4px; text-transform: uppercase;">🕒 Range Audit Tracker</h3>
       <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">Track unreturned permits or search full historical lifecycles across shifts.</p>
-      
       <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
         <div style="flex: 1; min-width: 140px;">
           <label style="font-size: 10px; font-weight:700; color:#64748b; display:block; margin-bottom:2px;">FROM DATE (DD/MM/YYYY)</label>
-          <input type="text" id="range-start-date" value="${esc(rangeStartDate)}" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+          <input type="text" id="range-start-date" value="${esc(rangeStartDate)}" onchange="rangeStartDate=this.value" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
         </div>
         <div style="width: 80px;">
           <label style="font-size: 10px; font-weight:700; color:#64748b; display:block; margin-bottom:2px;">SHIFT</label>
-          <select id="range-start-shift" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
-            <option value="A" ${rangeStartShift==="A"?'selected':''}>A</option>
-            <option value="B" ${rangeStartShift==="B"?'selected':''}>B</option>
-            <option value="C" ${rangeStartShift==="C"?'selected':''}>C</option>
+          <select id="range-start-shift" onchange="rangeStartShift=this.value" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+            <option value="A" ${rangeStartShift==="A"?'selected':''}>A</option><option value="B" ${rangeStartShift==="B"?'selected':''}>B</option><option value="C" ${rangeStartShift==="C"?'selected':''}>C</option>
           </select>
         </div>
       </div>
-
       <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
         <div style="flex: 1; min-width: 140px;">
           <label style="font-size: 10px; font-weight:700; color:#64748b; display:block; margin-bottom:2px;">TO DATE (DD/MM/YYYY)</label>
-          <input type="text" id="range-end-date" value="${esc(rangeEndDate)}" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+          <input type="text" id="range-end-date" value="${esc(rangeEndDate)}" onchange="rangeEndDate=this.value" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
         </div>
         <div style="width: 80px;">
           <label style="font-size: 10px; font-weight:700; color:#64748b; display:block; margin-bottom:2px;">SHIFT</label>
-          <select id="range-end-shift" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
-            <option value="A" ${rangeEndShift==="A"?'selected':''}>A</option>
-            <option value="B" ${rangeEndShift==="B"?'selected':''}>B</option>
-            <option value="C" ${rangeEndShift==="C"?'selected':''}>C</option>
+          <select id="range-end-shift" onchange="rangeEndShift=this.value" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+            <option value="A" ${rangeEndShift==="A"?'selected':''}>A</option><option value="B" ${rangeEndShift==="B"?'selected':''}>B</option><option value="C" ${rangeEndShift==="C"?'selected':''}>C</option>
           </select>
         </div>
       </div>
-
       <div style="margin-bottom: 14px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;">
         <label style="font-size: 10px; font-weight:800; color:#1e3a5f; display:block; margin-bottom:4px; text-transform:uppercase;">🔍 Live Order Number Search</label>
         <div style="display:flex; gap:6px;">
-          <input type="text" id="range-search-order" placeholder="Enter Order No. (e.g. 450312)" value="${esc(searchQuery)}" style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
+          <input type="text" id="range-search-order" placeholder="Enter Order No. (e.g. 450312)" value="${esc(searchQuery)}" oninput="document.getElementById('range-search-order').setAttribute('value', this.value)" style="flex:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px;">
           <button onclick="applyRangeAudit()" style="background:#475569; color:white; border:none; padding:0 14px; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer;">Search</button>
         </div>
       </div>
-
       <button onclick="applyRangeAudit()" style="width:100%; background:#2563eb; color:white; border:none; padding:10px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">
-        ${isRangeLoading ? "⏳ Loading Range Data..." : `🔍 Fetch & Run Range Audit (${rangeMissing.length} Unreturned)`}
+        🔍 Run Range Handover Audit (${rangeMissing.length} Unreturned)
       </button>
     </div>
-
     <div class="report-actions" style="padding: 0 14px; margin-bottom: 12px; display: flex; gap: 8px;">
       <button class="btn-excel" onclick="exportRangeAuditExcel()" style="flex:1;">📥 Export Unreturned</button>
       <button class="btn-share" onclick="dumpFullRangeDataCSV()" style="flex:1; background: #7c3aed; color: white;">📊 Export Full Range</button>
       <button class="btn-share" onclick="dumpUniqueRangeDataCSV()" style="flex:1; background: #0284c7; color: white;">🎯 Export Unique Final</button>
       <button id="range-capture-btn" onclick="captureRangeAuditImage()" style="background:#10b981; color:white; padding:11px; border-radius:10px; border:none; font-size:13px; font-weight:700; cursor:pointer; flex:1;">📸 Save Image</button>
     </div>
-
     <div style="padding: 0 14px;">`;
 
-  if (isRangeLoading) {
-    html += `<div class="card" style="text-align:center; padding: 24px; color:#64748b;">⏳ Querying backend for specified range records...</div></div></div>`;
-    return html;
-  }
-
   if (searchQuery) {
-    const searchResults = rangePermits.filter(p => String(p.orderNo || "").trim().includes(searchQuery));
+    const searchResults = permits.filter(p => String(p.orderNo || "").trim().includes(searchQuery));
     html += `<h4 style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color:#1e3a5f;">🔍 Lifecycle History Entries for "${esc(searchQuery)}" (${searchResults.length} logs found):</h4>`;
     if (searchResults.length === 0) {
-      html += `<div class="card" style="text-align:center; padding: 20px; color:#94a3b8; background:white; border-radius:8px; border:1px dashed #cbd5e1;">❌ No records found for that search. Click Search to query server.</div>`;
+      html += `<div class="card" style="text-align:center; padding: 20px; color:#94a3b8; background:white; border-radius:8px; border:1px dashed #cbd5e1;">❌ No historical records match that order entry.</div>`;
     } else {
       searchResults.sort((a,b) => getShiftScore(a.shiftDate, a.shift) - getShiftScore(b.shiftDate, b.shift));
       searchResults.forEach((p, index) => {
@@ -1016,7 +1015,7 @@ function renderRangeAuditView() {
   } else {
     html += `<h4 style="font-size: 13px; font-weight: 700; margin-bottom: 10px; color:#475569;">Unreturned Handover Permits (${rangeStartDate} to ${rangeEndDate}):</h4>`;
     if (rangeMissing.length === 0) {
-      html += `<div class="card" style="text-align:center; padding: 20px; color:#94a3b8; background:white; border-radius:8px; border:1px dashed #cbd5e1;">✅ No unreturned permits matching this range. Tap "Fetch & Run Range Audit" to refresh.</div>`;
+      html += `<div class="card" style="text-align:center; padding: 20px; color:#94a3b8; background:white; border-radius:8px; border:1px dashed #cbd5e1;">✅ No unreturned permits found matching this timeframe window.</div>`;
     } else {
       rangeMissing.forEach(p => {
         html += `<div class="card" style="border-left: 4px solid #ef4444; background:white; padding:12px; margin-bottom:8px; border-radius:8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
@@ -1037,46 +1036,27 @@ function renderRangeAuditView() {
   return html;
 }
 
-async function applyRangeAudit() {
-  const startD = document.getElementById("range-start-date");
-  const startS = document.getElementById("range-start-shift");
-  const endD = document.getElementById("range-end-date");
-  const endS = document.getElementById("range-end-shift");
-  const searchInputEl = document.getElementById("range-search-order");
-
-  if (startD) rangeStartDate = startD.value.trim();
-  if (startS) rangeStartShift = startS.value;
-  if (endD) rangeEndDate = endD.value.trim();
-  if (endS) rangeEndShift = endS.value;
-
-  const searchQuery = searchInputEl ? searchInputEl.value.trim() : "";
-  const startScore = getShiftScore(rangeStartDate, rangeStartShift);
-  const endScore = getShiftScore(rangeEndDate, rangeEndShift);
-
-  isRangeLoading = true;
+function applyRangeAudit() {
+  const startD = document.getElementById("range-start-date"); const startS = document.getElementById("range-start-shift");
+  const endD = document.getElementById("range-end-date"); const endS = document.getElementById("range-end-shift");
+  if (startD) rangeStartDate = startD.value.trim(); if (startS) rangeStartShift = startS.value;
+  if (endD) rangeEndDate = endD.value.trim(); if (endS) rangeEndShift = endS.value;
   render();
-
-  try {
-    const res = await api("getRangePermits", {
-      startScore,
-      endScore,
-      searchOrder: searchQuery
-    });
-    rangePermits = (res.permits || []).map(x => ({ ...x, id: String(x.id) }));
-  } catch (err) {
-    alert("Failed to load range records: " + err.message);
-  } finally {
-    isRangeLoading = false;
-    render();
-  }
 }
 
 function dumpFullRangeDataCSV() {
-  if (rangePermits.length === 0) { alert("Please click 'Fetch & Run Range Audit' first before exporting."); return; }
-  const rangePermitsCopy = [...rangePermits];
-  rangePermitsCopy.sort((a, b) => getShiftScore(a.shiftDate, a.shift) - getShiftScore(b.shiftDate, b.shift));
+  const startScore = getShiftScore(rangeStartDate, rangeStartShift); const endScore = getShiftScore(rangeEndDate, rangeEndShift);
+  if (startScore > endScore) { alert("Invalid Date Range Selection Window!"); return; }
+  const rangePermits = permits.filter(p => {
+    const d = String(p.shiftDate || "").trim(); const s = String(p.shift || "").trim();
+    if (!d || !s) return false;
+    const itemScore = getShiftScore(d, s);
+    return itemScore >= startScore && itemScore <= endScore;
+  });
+  if (rangePermits.length === 0) { alert("No records found within this timeframe."); return; }
+  rangePermits.sort((a, b) => getShiftScore(a.shiftDate, a.shift) - getShiftScore(b.shiftDate, b.shift));
   const headers = ["System ID", "Shift Date", "Shift", "Order No", "Type", "Section", "Job Description", "Receiver", "Contact No", "Isolation Time", "Issue Time", "Extended Time", "Returned Time", "Permit Structure", "Status", "Issued By"];
-  const rows = rangePermitsCopy.map(p => [ p.id || "", p.shiftDate || "", p.shift || "", p.orderNo || "", classifyOrder(p.orderNo), p.section || "", p.jobDescription || "", p.receiver || "", p.contactNo || "", p.isolationTime || "—", p.issueTime || "—", p.extendedTime || "—", p.returnedTime || "—", getPermitColumnText(p), p.status || "Issued", p.issuer || "" ]);
+  const rows = rangePermits.map(p => [ p.id || "", p.shiftDate || "", p.shift || "", p.orderNo || "", classifyOrder(p.orderNo), p.section || "", p.jobDescription || "", p.receiver || "", p.contactNo || "", p.isolationTime || "—", p.issueTime || "—", p.extendedTime || "—", p.returnedTime || "—", getPermitColumnText(p), p.status || "Issued", p.issuer || "" ]);
   const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
@@ -1086,29 +1066,77 @@ function dumpFullRangeDataCSV() {
 }
 
 function dumpUniqueRangeDataCSV() {
-  if (rangePermits.length === 0) {
-    alert("Please click 'Fetch & Run Range Audit' first before exporting.");
+  const startScore = getShiftScore(rangeStartDate, rangeStartShift);
+  const endScore = getShiftScore(rangeEndDate, rangeEndShift);
+
+  if (startScore > endScore) {
+    alert("Invalid Date Range Selection Window!");
     return;
   }
 
-  const latestByOrder = new Map();
+  // 1. Filter all records within the selected range window
+  const rangePermits = permits.filter(p => {
+    const d = String(p.shiftDate || "").trim();
+    const s = String(p.shift || "").trim();
+    if (!d || !s) return false;
+    const itemScore = getShiftScore(d, s);
+    return itemScore >= startScore && itemScore <= endScore;
+  });
+
+  if (rangePermits.length === 0) {
+    alert("No records found within this timeframe.");
+    return;
+  }
+
+  // 2. Group by Order No and resolve to the latest shift occurrence
+  const uniqueMap = new Map();
+
   rangePermits.forEach(p => {
-    const rawOrder = String(p.orderNo || "").trim();
-    if (!rawOrder) return;
-    if (!latestByOrder.has(rawOrder)) {
-      latestByOrder.set(rawOrder, p);
+    const rawNo = String(p.orderNo || "").trim();
+    if (!rawNo) return;
+
+    if (!uniqueMap.has(rawNo)) {
+      uniqueMap.set(rawNo, p);
     } else {
-      const existing = latestByOrder.get(rawOrder);
-      if (getShiftScore(p.shiftDate, p.shift) >= getShiftScore(existing.shiftDate, existing.shift)) {
-        latestByOrder.set(rawOrder, p);
+      const existing = uniqueMap.get(rawNo);
+      const existingScore = getShiftScore(existing.shiftDate, existing.shift);
+      const currentScore = getShiftScore(p.shiftDate, p.shift);
+
+      // Keep the record with the higher shift score (chronologically latest entry)
+      if (currentScore > existingScore) {
+        uniqueMap.set(rawNo, p);
+      } else if (currentScore === existingScore) {
+        // Tie-breaker: prefer 'returned' status if both exist in the same shift
+        if (p.status === "returned" && existing.status !== "returned") {
+          uniqueMap.set(rawNo, p);
+        }
       }
     }
   });
 
-  const uniqueList = Array.from(latestByOrder.values());
+  const uniqueList = Array.from(uniqueMap.values());
+
+  // 3. Sort entries chronologically by their final seen shift and date
   uniqueList.sort((a, b) => getShiftScore(a.shiftDate, a.shift) - getShiftScore(b.shiftDate, b.shift));
 
-  const headers = ["Order No", "Type", "Last Date", "Last Shift", "Section", "Job Description", "Receiver", "Contact No", "Isolation Time", "Issue Time", "Extended Time", "Returned Time", "Permit Structure", "Final Status", "Issued By"];
+  const headers = [
+    "Order No",
+    "Type",
+    "Latest Date",
+    "Latest Shift",
+    "Section",
+    "Job Description",
+    "Receiver",
+    "Contact No",
+    "Isolation Time",
+    "Issue Time",
+    "Extended Time",
+    "Returned Time",
+    "Permit Structure",
+    "Final Status",
+    "Issued By"
+  ];
+
   const rows = uniqueList.map(p => [
     p.orderNo || "",
     classifyOrder(p.orderNo),
@@ -1127,12 +1155,13 @@ function dumpUniqueRangeDataCSV() {
     p.issuer || ""
   ]);
 
+  // 4. Generate CSV
   const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `Unique_Final_Range_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.csv`;
+  a.download = `Unique_Final_Range_Dump_${rangeStartDate.replace(/\//g, "-")}_to_${rangeEndDate.replace(/\//g, "-")}.csv`;
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
@@ -1140,7 +1169,7 @@ function dumpUniqueRangeDataCSV() {
 
 function exportRangeAuditExcel() {
   const rangeMissing = getRangeUnreturnedPermits();
-  if (rangeMissing.length === 0) { alert("No unreturned range data to export. Please query a range first."); return; }
+  if (rangeMissing.length === 0) { alert("No unreturned range data to export."); return; }
   const headers = ["Order No", "Job Description", "Section", "Receiver", "Contact No", "Last Seen Date", "Last Seen Shift", "Last Status"];
   const rows = rangeMissing.map(p => [ p.orderNo || "", p.jobDescription || "", p.section || "", p.receiver || "", p.contactNo || "", p.lastSeenDate || "", p.lastSeenShift || "", p.lastStatus || "Issued" ]);
   const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -1170,7 +1199,7 @@ async function captureRangeAuditImage() {
         if (isIOS) {
             const newWindow = window.open();
             if (newWindow) {
-                newWindow.document.write(`<html><head><title>Range Audit Preview</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; } img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); } .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,200,0.2); border-radius: 20px; font-size: 14px; }</style></head><body><div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div><img src="${imageUri}" alt="Range Audit Report" /></body></html>`);
+                newWindow.document.write(`<html><head><title>Range Audit Preview</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, sans-serif; color: white; text-align: center; } img { max-width: 100%; max-height: 80vh; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); } .instruction { margin-bottom: 20px; padding: 10px 20px; background: rgba(255,255,255,0.2); border-radius: 20px; font-size: 14px; }</style></head><body><div class="instruction">💡 Long-press the image below and select <b>"Save to Photos"</b></div><img src="${imageUri}" alt="Range Audit Report" /></body></html>`);
                 newWindow.document.close();
             } else { alert("Pop-up blocked! Please allow pop-ups for this site to view/save the report image."); }
         } else {
@@ -1398,6 +1427,7 @@ function exportUniqueFinalExcel() {
   }, 100);
 }
 
+
 function shareReport() {
   const ap = activePermits(); const orderCounts = {};
   ap.forEach(p => { const num = String(p.orderNo || "").trim(); if (num) orderCounts[num] = (orderCounts[num] || 0) + 1; });
@@ -1423,9 +1453,9 @@ function shareReport() {
   let txt = `📋 *PERMIT TRACKER REPORT*\n📆 Date: ${meta.date} | ⏱️ Shift: ${meta.shift}\n📊 Filter: ${sectionFilter}\n\n`;
   sortedPermits.forEach((p, i) => {
     const currentNo = String(p.orderNo || "").trim(); const isDuplicate = orderCounts[currentNo] > 1;
-    const orderStr = isDuplicate ? `${p.orderNo} (⚠️️ Duplicate)` : p.orderNo;
+    const orderStr = isDuplicate ? `${p.orderNo} (⚠️ Duplicate)` : p.orderNo;
     const oType = classifyOrder(p.orderNo); const permitTypeStr = getPermitColumnText(p);
-    txt += `*#${i + 1} . Order No:* ${orderStr}\n▪️ *Type:* ${oType}\n▪️ *Section:* ${p.section || "—"}\n▪️ *Description:* ${p.jobDescription}\n▪️️ *Receiver:* ${p.receiver} ${p.contactNo ? `(${p.contactNo})` : ""}\n▪️ *Isolation Time:* ${p.isolationTime || "—"}\n▪️ *Issue Time:* ${p.issueTime || "—"}\n▪️ *Extended Time:* ${p.extendedTime || "—"}\n▪️ *Returned Time:* ${p.returnedTime || "—"}\n▪️️ *Permit Type:* ${permitTypeStr}\n▪️ *Status:* ${p.status || "—"}\n▪️ *Issued By:* ${p.issuer || "—"}\n--------------------------------------\n`;
+    txt += `*#${i + 1} . Order No:* ${orderStr}\n▪️ *Type:* ${oType}\n▪️ *Section:* ${p.section || "—"}\n▪️ *Description:* ${p.jobDescription}\n▪️ *Receiver:* ${p.receiver} ${p.contactNo ? `(${p.contactNo})` : ""}\n▪️ *Isolation Time:* ${p.isolationTime || "—"}\n▪️ *Issue Time:* ${p.issueTime || "—"}\n▪️ *Extended Time:* ${p.extendedTime || "—"}\n▪️ *Returned Time:* ${p.returnedTime || "—"}\n▪️ *Permit Type:* ${permitTypeStr}\n▪️ *Status:* ${p.status || "—"}\n▪️ *Issued By:* ${p.issuer || "—"}\n--------------------------------------\n`;
   });
   if (navigator.share) { navigator.share({ text: txt }).catch(err => console.log(err)); } else { navigator.clipboard.writeText(txt).then(() => alert("Report text copied to clipboard!")); }
 }
@@ -1681,9 +1711,9 @@ async function processScan(input) {
 }
 
 // ══════════════════════════════════════
-//  SAVE / DELETE (OPTIMISTIC INSTANT UPDATE)
+//  SAVE / DELETE
 // ══════════════════════════════════════
-async function savePermit(isEdit, isApproveRequest=false) {
+function savePermit(isEdit, isApproveRequest = false) {
   const orderNo        = document.getElementById("f-orderNo").value.trim();
   const jobDescription = document.getElementById("f-jobDesc").value.trim();
   const receiver       = document.getElementById("f-receiver").value.trim();
@@ -1692,17 +1722,16 @@ async function savePermit(isEdit, isApproveRequest=false) {
   const unit           = document.getElementById("f-unit").value.trim();
   const status         = document.getElementById("f-status").value.trim();
   const isOnline       = document.getElementById("f-online").checked;
-  const isolationTime  = isOnline?"":(document.getElementById("f-isoTime").value||"");
-  const issueTime      = document.getElementById("f-issueTime").value||"";
-  const extendedTime   = document.getElementById("f-extTime")?.value||"";
-  const returnedTime   = document.getElementById("f-retTime")?.value||"";
+  const isolationTime  = isOnline ? "" : (document.getElementById("f-isoTime").value || "");
+  const issueTime      = document.getElementById("f-issueTime").value || "";
+  const extendedTime   = document.getElementById("f-extTime")?.value || "";
+  const returnedTime   = document.getElementById("f-retTime")?.value || "";
 
   if (!orderNo || !jobDescription || !receiver) {
     alert("Order No, Job Description and Receiver are required.");
     return;
   }
 
-  // Strict Order Number validation based on classifyOrder logic
   const orderType = classifyOrder(orderNo);
   const validTypes = ["MA", "M1", "M2", "M3", "M4"];
   if (!orderType || !validTypes.includes(orderType)) {
@@ -1741,78 +1770,71 @@ async function savePermit(isEdit, isApproveRequest=false) {
     }
   }
 
-  const btn = document.getElementById("save-btn");
-  btn.disabled=true; btn.textContent="Processing...";
-  
-  const prevPermitsSnapshot = [...permits];
-  const prevRequestsSnapshot = [...requests];
+  const permit = { 
+    orderNo, jobDescription, receiver, contactNo, section, unit, 
+    status, isOnline, isolationTime, issueTime, extendedTime, returnedTime, 
+    issuer: meta.issuer || (editingPermit ? editingPermit.issuer : ""), 
+    shiftDate: meta.date, 
+    shift: meta.shift 
+  };
 
-  try {
-    const permit = { 
-      orderNo, jobDescription, receiver, contactNo, section, unit, 
-      status, isOnline, isolationTime, issueTime, extendedTime, returnedTime, 
-      issuer: meta.issuer || (editingPermit ? editingPermit.issuer : ""), 
-      shiftDate: (editingPermit && isEdit) ? editingPermit.shiftDate : meta.date, 
-      shift: (editingPermit && isEdit) ? editingPermit.shift : meta.shift 
-    };
-
-    if (isApproveRequest) {
+  // 1. Instant local update (Optimistic)
+  if (isApproveRequest) {
+    permit.id = editingPermit.id;
+    permit.targetPermitId = editingPermit.targetPermitId || "";
+    // Remove from pending requests
+    requests = requests.filter(r => String(r.id) !== String(editingPermit.id));
+    // Upsert into active permits
+    const pIdx = permits.findIndex(p => String(p.id) === String(permit.targetPermitId || permit.id));
+    if (pIdx >= 0) permits[pIdx] = permit;
+    else permits.unshift(permit);
+  } else if (isIssuer) {
+    if (isEdit) {
       permit.id = editingPermit.id;
-      permit.targetPermitId = editingPermit.targetPermitId || "";
-      requests = requests.filter(r => String(r.id) !== String(editingPermit.id));
-      if (permit.targetPermitId) {
-        permits = permits.map(p => String(p.id) === String(permit.targetPermitId) ? { ...permit, id: permit.targetPermitId } : p);
-      } else {
-        permits.unshift(permit);
-      }
-    } else if (isIssuer) {
-      if (isEdit) { 
-        permit.id = editingPermit.id; 
-        permits = permits.map(p => String(p.id) === String(permit.id) ? { ...p, ...permit } : p);
-      } else { 
-        permit.id = "TMP-" + Date.now();
-        permits.unshift(permit);
-      }
+      const idx = permits.findIndex(p => String(p.id) === String(editingPermit.id));
+      if (idx >= 0) permits[idx] = permit;
     } else {
-      if (isEdit && editingPermit) {
-        permit.targetPermitId = editingPermit.id;
-        permit.requestType = "update";
-      } else {
-        permit.requestType = "new";
-      }
-      permit.id = "REQ-" + Date.now();
-      requests.unshift(permit);
-      alert(isEdit ? "✅ Update request sent to Issuer for approval." : "✅ Request sent to Issuer for approval.");
+      permit.id = "tmp_" + Date.now(); // temporary id
+      permits.unshift(permit);
     }
-
-    persistCache();
-    removeModal(); 
-    render();
-
-    if (isApproveRequest) {
-      await api("approveRequest", { permit });
-    } else if (isIssuer) {
-      if (isEdit) { 
-        await api("update", { permit }); 
-      } else { 
-        await api("add", { permit }); 
-      }
+  } else {
+    // Non-issuer request
+    if (isEdit && editingPermit) {
+      permit.targetPermitId = editingPermit.id;
+      permit.requestType = "update";
     } else {
-      await api("addRequest", { permit });
+      permit.requestType = "new";
     }
-
-    await doRefresh();
-  } catch(err) {
-    permits = prevPermitsSnapshot;
-    requests = prevRequestsSnapshot;
-    persistCache();
-    render();
-    alert("Action failed: "+err.message);
-    if (btn) {
-      btn.disabled=false; 
-      btn.textContent=isApproveRequest ? "Approve Permit" : isIssuer ? (isEdit ? "Update Permit" : "Add Permit") : (isEdit ? "Request Update" : "Send for Approval");
-    }
+    permit.id = "tmp_req_" + Date.now();
+    requests.unshift(permit);
   }
+
+  saveLocalCache();
+  removeModal();
+  render(); // Screen reflects change immediately
+
+  // 2. Background sync (Does not block UI)
+  (async () => {
+    try {
+      if (isApproveRequest) {
+        await api("approveRequest", { permit });
+      } else if (isIssuer) {
+        if (isEdit) {
+          await api("update", { permit });
+        } else {
+          await api("add", { permit });
+        }
+      } else {
+        await api("addRequest", { permit });
+      }
+      // Silently sync server response to refresh true IDs
+      await doRefresh(true);
+    } catch(err) {
+      console.error("Background sync error:", err);
+      alert("⚠️ Background sync failed: " + err.message + ". App will reload latest data.");
+      await doRefresh(false);
+    }
+  })();
 }
 
 async function confirmDelete() {
@@ -1820,23 +1842,8 @@ async function confirmDelete() {
   if (password === null) return; 
   if (password !== "sherlockholmes1") { alert("❌ Incorrect password. Access denied. Contact admin"); return; }
   if (!confirm("Are you absolutely sure you want to delete this permit entry?")) return;
-  
-  const idToDelete = editingPermit.id;
-  const prevPermitsSnapshot = [...permits];
-  
-  try { 
-    permits = permits.filter(p => String(p.id) !== String(idToDelete));
-    persistCache();
-    removeModal(); 
-    render();
-    await api("delete", { id: idToDelete }); 
-    await doRefresh(); 
-  } catch(err) { 
-    permits = prevPermitsSnapshot;
-    persistCache();
-    render();
-    alert("Delete failed: "+err.message); 
-  }
+  try { await api("delete",{id:editingPermit.id}); removeModal(); await doRefresh(); } 
+  catch(err) { alert("Delete failed: "+err.message); }
 }
 
 function openAdd() {
@@ -1927,76 +1934,32 @@ async function saveSetup() {
   const issuerVal = document.getElementById("s-issuer") ? document.getElementById("s-issuer").value.trim() : (meta.issuer || "");
   meta = { date: parts[2]+"/"+parts[1]+"/"+parts[0], shift: document.getElementById("s-shift").value, issuer: issuerVal };
   localStorage.setItem("ars2_meta", JSON.stringify(meta));
-  removeModal(); 
-  await doRefresh();
+  removeModal(); render();
 }
 
 function setFilter(s) { sectionFilter=s; render(); }
 function switchView(v) { currentView=v; render(); }
 
 // ══════════════════════════════════════
-//  REFRESH MANAGEMENT (SMART CHAINED POLLING)
+//  REFRESH MANAGEMENT
 // ══════════════════════════════════════
 async function doRefresh(isAuto = false) {
-  const isModalOpen = !!document.getElementById("modal-overlay");
-  const isInputFocused = document.activeElement && 
-    ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
-
-  if (isAuto && (isModalOpen || isInputFocused)) return;
-
+  if (isAuto && document.getElementById("modal-overlay")) return;
   syncing = true;
   const syncBtn = document.querySelector(".header-actions button");
   if (syncBtn) syncBtn.textContent = "⏳";
-  try { 
-    await loadAll(); 
-  } catch(err) { 
-    console.error(err); 
-  }
+  try { await loadAll(); } catch(err) { console.error(err); }
   syncing = false;
   render();
 }
-
-async function smartPoll() {
-  if (!syncing) {
-    try {
-      await doRefresh(true);
-    } catch (e) {
-      console.error("Auto-sync error:", e);
-    }
-  }
-
-  // Next sync scheduled 4.5 seconds after previous finishes
-  if (isPollingActive) {
-    refreshTimer = setTimeout(smartPoll, 4500); 
-  }
-}
-
-function startPolling() {
-  if (refreshTimer) clearTimeout(refreshTimer);
-  isPollingActive = true;
-  smartPoll();
-}
-
-function stopPolling() {
-  isPollingActive = false;
-  if (refreshTimer) clearTimeout(refreshTimer);
-}
-
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    stopPolling();
-  } else {
-    doRefresh(true);
-    startPolling();
-  }
-});
-window.addEventListener("focus", () => doRefresh(true));
-
 async function init() {
-  render(); 
-  await doRefresh(false); 
-  startPolling();
+  loadLocalCache(); // Load instant offline/cached state
+  render();         // Show records immediately without wait
+  await doRefresh(false); // Sync latest in background
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => doRefresh(true), 20000);
 }
+
 init();
 </script>
 </body>
